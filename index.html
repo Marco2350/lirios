@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lirios Floristería — Flores frescas en El Progreso, Yoro</title>
+  <meta name="description" content="Floristería en El Progreso, Yoro. Ramos, canastas y arreglos florales hechos a mano. Personaliza tu ramo y haz tu pedido por WhatsApp.">
+  <meta property="og:title" content="Lirios Floristería — Flores frescas en El Progreso, Yoro">
+  <meta property="og:description" content="Ramos, canastas y arreglos florales hechos a mano. Personaliza tu ramo y pide por WhatsApp.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="images/productos/ramo-alba-rosa.png">
+  <meta property="og:locale" content="es_HN">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html">
+        <img src="images/logo.png" alt="Lirios Floristería — inicio">
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+        <a href="index.html" aria-current="page">Inicio</a>
+        <a href="catalogo.html">Catálogo</a>
+        <a href="personalizar.html">Personalizar</a>
+        <a href="nosotros.html">Nosotros</a>
+        <a href="contacto.html">Contacto</a>
+      </nav>
+      <div class="header-actions">
+        <a class="cart-link" href="carrito.html" aria-label="Ver carrito">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1.6"/><circle cx="19" cy="21" r="1.6"/><path d="M2.5 3h2l2.6 12.4a1.8 1.8 0 0 0 1.8 1.4h9.7a1.8 1.8 0 0 0 1.8-1.4L22 7H6"/></svg>
+          <span class="cart-count" id="cart-count" hidden>0</span>
+        </a>
+        <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Abrir menú">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Hero - Contemporáneo y lujoso -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="hero-eyebrow">
+            <span class="eyebrow">El Progreso, Yoro</span>
+          </div>
+          <h1>Flores que<br>dicen lo que<br>las palabras no alcanzan.</h1>
+          <p class="hero-lead">Arreglos excepcionales hechos a mano con flores frescas de temporada. Elige del catálogo o diseña tu propio ramo.</p>
+
+          <div class="hero-actions">
+            <a class="btn" href="catalogo.html">Explorar el catálogo</a>
+            <a class="btn btn-outline" href="personalizar.html">Diseñar mi ramo</a>
+          </div>
+
+          <div class="hero-trust">
+            <div class="trust-item">
+              <span class="trust-dot"></span>
+              <span>Flores frescas diarias</span>
+            </div>
+            <div class="trust-item">
+              <span class="trust-dot"></span>
+              <span>Hecho a mano</span>
+            </div>
+            <div class="trust-item">
+              <span class="trust-dot"></span>
+              <span>Entrega el mismo día</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-carousel" id="hero-carousel" aria-label="Galería de arreglos destacados">
+          <div class="carousel-frame">
+            <figure class="carousel-slide is-active" data-nombre="Ramo Alba Rosa" data-href="producto.html?id=ramo-alba-rosa">
+              <img src="images/productos/ramo-alba-rosa.png" alt="Ramo de lirios y gerberas rosadas envuelto en papel blanco" fetchpriority="high">
+              <div class="img-overlay"></div>
+            </figure>
+            <figure class="carousel-slide" data-nombre="Ramo Dulce Amor" data-href="producto.html?id=ramo-dulce-amor">
+              <img src="images/productos/ramo-dulce-amor.png" alt="Ramo de rosas rojas con chocolates finos" loading="lazy">
+              <div class="img-overlay"></div>
+            </figure>
+            <figure class="carousel-slide" data-nombre="Canasta Primaveral" data-href="producto.html?id=canasta-primaveral">
+              <img src="images/productos/canasta-primaveral.png" alt="Canasta artesanal con lirios rosados y gerberas" loading="lazy">
+              <div class="img-overlay"></div>
+            </figure>
+            <figure class="carousel-slide" data-nombre="Orgullo de Graduación" data-href="producto.html?id=arreglo-graduacion">
+              <img src="images/productos/arreglo-graduacion.png" alt="Arreglo de graduación con birrete y flores rosadas" loading="lazy">
+              <div class="img-overlay"></div>
+            </figure>
+            <figure class="carousel-slide" data-nombre="Ramo Lila Festivo" data-href="producto.html?id=ramo-lila-festivo">
+              <img src="images/productos/ramo-lila-festivo.png" alt="Ramo de gerberas bicolor con envoltura lila" loading="lazy">
+              <div class="img-overlay"></div>
+            </figure>
+
+            <div class="carousel-tag">
+              <a href="producto.html?id=ramo-alba-rosa">Ramo Alba Rosa</a>
+            </div>
+          </div>
+          <div class="carousel-controls">
+            <button type="button" class="carousel-btn carousel-prev" aria-label="Foto anterior">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div class="carousel-dots" role="group" aria-label="Elegir foto"></div>
+            <button type="button" class="carousel-btn carousel-next" aria-label="Foto siguiente">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Destacados -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head centered">
+          <h2>Los más elegidos</h2>
+          <p class="muted">Arreglos creados con flores de temporada. Cada uno se prepara el mismo día.</p>
+        </div>
+        <div class="product-grid" id="featured-grid">
+          <!-- Se llena desde data/productos.json -->
+        </div>
+        <div style="text-align:center; margin-top: 2.75rem;">
+          <a class="btn btn-outline" href="catalogo.html">Ver catálogo completo</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA personalizar -->
+    <section class="section cta-band">
+      <div class="container reveal">
+        <span class="eyebrow">Diseño exclusivo</span>
+        <h2>¿Buscas algo único?<br>Crea tu ramo perfecto.</h2>
+        <p>Elige flor, color dominante, tamaño y los detalles que lo hacen tuyo. Precio en tiempo real. Entregado con la misma atención.</p>
+        <a class="btn" href="personalizar.html">Comenzar a diseñar</a>
+      </div>
+    </section>
+
+    <!-- Sobre nosotros breve -->
+    <section class="section">
+      <div class="container about-grid">
+        <div class="arch-img reveal">
+          <img src="images/productos/canasta-primaveral.png" alt="Canasta artesanal con lirios rosados y gerberas" loading="lazy">
+        </div>
+        <div class="reveal">
+          <h2>Artesanía floral<br>en El Progreso.</h2>
+          <p class="muted">Cada arreglo nace en nuestro taller de Plaza Rosamanda con flores frescas de temporada. Detrás de cada entrega hay manos expertas y una obsesión por la belleza y el detalle.</p>
+          <a class="btn btn-outline" href="nosotros.html">Nuestra historia</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA WhatsApp -->
+    <section class="section section-alt">
+      <div class="container reveal" style="text-align:center">
+        <h2>Tu pedido, a un mensaje de distancia</h2>
+        <p class="muted" style="max-width:52ch; margin-inline:auto">Arma tu carrito y envíanos el detalle por WhatsApp. Coordinamos el pago y la entrega directamente contigo.</p>
+        <a class="btn btn-whatsapp" href="https://wa.me/50487502362" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a9.9 9.9 0 0 0-8.5 15.1L2 22l5-1.4A10 10 0 1 0 12 2Zm5.2 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.2c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.9 1.8.3.2.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4.1.2.1.7-.1 1.3Z"/></svg>
+          Escríbenos al 8750-2362
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-top">
+      <div class="footer-brand">
+        <img src="images/logo.png" alt="Lirios Floristería">
+        <p class="footer-tagline">Flores que hablan por ti</p>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/liriosfloristeriahn/?hl=es" target="_blank" rel="noopener" aria-label="Instagram de Lirios Floristería">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg>
+          </a>
+          <a href="https://www.facebook.com/p/Lirios-Florister%C3%ADa-61563818806306/" target="_blank" rel="noopener" aria-label="Facebook de Lirios Floristería">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </a>
+          <a href="https://wa.me/50487502362" target="_blank" rel="noopener" aria-label="WhatsApp de Lirios Floristería">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a9.9 9.9 0 0 0-8.5 15.1L2 22l5-1.4A10 10 0 1 0 12 2Zm5.2 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.2c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.9 1.8.3.2.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4.1.2.1.7-.1 1.3Z"/></svg>
+          </a>
+        </div>
+      </div>
+      <nav class="footer-col" aria-label="Enlaces del sitio">
+        <h4>Explora</h4>
+        <ul>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="personalizar.html">Personaliza tu ramo</a></li>
+          <li><a href="carrito.html">Carrito</a></li>
+          <li><a href="nosotros.html">Nosotros</a></li>
+          <li><a href="contacto.html">Contacto</a></li>
+        </ul>
+      </nav>
+      <div class="footer-col">
+        <h4>Horario</h4>
+        <ul>
+          <li>Lunes a sábado<br><strong>8:30 a.m. – 6:00 p.m.</strong></li>
+          <li>Domingo<br><strong>10:00 a.m. – 4:00 p.m.</strong></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Visítanos</h4>
+        <ul>
+          <li>Plaza Rosamanda, local 1<br>Salida a Santa Rita<br>El Progreso, Yoro</li>
+          <li><a href="tel:+50487502362">+504 8750-2362</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <span>© <span id="year"></span> Lirios Floristería</span>
+        <span>El Progreso · Yoro · Honduras</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Con file:// el navegador bloquea los módulos JS: avisar cómo abrir el sitio
+    if (location.protocol === 'file:') {
+      document.body.insertAdjacentHTML('afterbegin',
+        '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo, el personalizador y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/productos.js"></script>
+  <script type="module" src="js/carousel.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "flores": [
+    { "id": "rosas", "nombre": "Rosas", "precio": 450, "kind": "rose" },
+    { "id": "girasoles", "nombre": "Girasoles", "precio": 400, "kind": "sunflower" },
+    { "id": "lirios", "nombre": "Lirios", "precio": 500, "kind": "lily" },
+    { "id": "astromelias", "nombre": "Astromelias", "precio": 350, "kind": "aster" },
+    { "id": "mixto", "nombre": "Ramo mixto", "precio": 480, "kind": "mixed" }
+  ],
+  "colores": [
+    { "id": "rojo", "nombre": "Rojo", "css": "#B3261E" },
+    { "id": "rosado", "nombre": "Rosado", "css": "#E88BAD" },
+    { "id": "blanco", "nombre": "Blanco", "css": "#F5EFE6" },
+    { "id": "amarillo", "nombre": "Amarillo", "css": "#E7C544" },
+    { "id": "mixto", "nombre": "Mixto", "css": "linear-gradient(135deg, #B3261E 0%, #E7C544 50%, #B497D6 100%)" }
+  ],
+  "wraps": [
+    { "id": "kraft", "nombre": "Papel Kraft Natural", "precio": 60, "color": "#d2b48c", "description": "Textura natural y rústica" },
+    { "id": "blanco", "nombre": "Papel Blanco Texturizado", "precio": 80, "color": "#f5f0e6", "description": "Elegante y limpio" },
+    { "id": "rosado", "nombre": "Papel Rosado Suave", "precio": 75, "color": "#f8d7d7", "description": "Romántico y delicado" },
+    { "id": "verde", "nombre": "Papel Verde Salvia", "precio": 70, "color": "#a8b5a0", "description": "Fresco y moderno" }
+  ],
+  "ribbons": [
+    { "id": "dorado", "nombre": "Listón Dorado", "precio": 45, "color": "#C8860B" },
+    { "id": "rosado", "nombre": "Listón Rosado", "precio": 40, "color": "#E88BAD" },
+    { "id": "blanco", "nombre": "Listón Blanco", "precio": 35, "color": "#f5f0e6" },
+    { "id": "verde", "nombre": "Listón Verde", "precio": 40, "color": "#5a7a5a" },
+    { "id": "negro", "nombre": "Listón Negro Elegante", "precio": 50, "color": "#2B2118" }
+  ],
+  "extras": [
+    { "id": "chocolates", "nombre": "Chocolates", "precio": 120 },
+    { "id": "peluche", "nombre": "Peluche pequeño", "precio": 200 },
+    { "id": "globo", "nombre": "Globo metálico", "precio": 80 },
+    { "id": "tarjeta", "nombre": "Tarjeta con dedicatoria", "precio": 30 },
+    { "id": "florero", "nombre": "Florero de vidrio", "precio": 150 }
+  ]
+}

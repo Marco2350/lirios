@@ -1,0 +1,93 @@
+{
+  "productos": [
+    {
+      "id": "ramo-dulce-amor",
+      "nombre": "Ramo Dulce Amor",
+      "descripcion": "Seis rosas rojas premium acompañadas de chocolates finos, gypsophila y eucalipto fresco, envueltas en papel estilo periódico con lazo dorado. El clásico que nunca falla para sorprender a esa persona especial.",
+      "precio": 950,
+      "categoria": "ramos",
+      "ocasion": "aniversario",
+      "imagen": "images/productos/ramo-dulce-amor.png",
+      "disponible": true,
+      "destacado": true
+    },
+    {
+      "id": "canasta-primaveral",
+      "nombre": "Canasta Primaveral",
+      "descripcion": "Canasta artesanal de fibra natural con lirios orientales rosados, gerberas, mini rosas y hortensia, terminada con listón satinado. Un jardín completo para alegrar cualquier espacio.",
+      "precio": 1150,
+      "categoria": "canastas",
+      "ocasion": "cumpleanos",
+      "imagen": "images/productos/canasta-primaveral.png",
+      "disponible": true,
+      "destacado": true
+    },
+    {
+      "id": "ramo-alba-rosa",
+      "nombre": "Ramo Alba Rosa",
+      "descripcion": "Lirios orientales en botón, gerberas fucsia, rosas rosadas y solidago dorado envueltos en papel blanco texturizado. Fresco, luminoso y perfecto para celebrar un día especial.",
+      "precio": 850,
+      "categoria": "ramos",
+      "ocasion": "cumpleanos",
+      "imagen": "images/productos/ramo-alba-rosa.png",
+      "disponible": true,
+      "destacado": true
+    },
+    {
+      "id": "jarron-coral",
+      "nombre": "Jarrón Coral",
+      "descripcion": "Arreglo en jarrón de cerámica blanca con gerberas coral, mini rosas, astromelias y margaritas, decorado con listones “Love is eternal”. Ideal para regalar sin preocuparse por el florero.",
+      "precio": 1050,
+      "categoria": "arreglos",
+      "ocasion": "agradecimiento",
+      "imagen": "images/productos/jarron-coral.png",
+      "disponible": true,
+      "destacado": false
+    },
+    {
+      "id": "ramo-durazno",
+      "nombre": "Ramo Durazno",
+      "descripcion": "Una gerbera durazno como protagonista, rodeada de claveles crema, gypsophila y eucalipto, en envoltura melocotón de doble capa. Un detalle delicado que dice mucho con poco.",
+      "precio": 450,
+      "categoria": "ramos",
+      "ocasion": "detalle",
+      "imagen": "images/productos/ramo-durazno.png",
+      "disponible": true,
+      "destacado": false
+    },
+    {
+      "id": "ramo-lila-festivo",
+      "nombre": "Ramo Lila Festivo",
+      "descripcion": "Gerberas bicolor rosadas, solidago amarillo, margaritas y eucalipto en envoltura lila de tul y papel coreano. Alegre, vibrante y listo para robarse las miradas en la fiesta.",
+      "precio": 750,
+      "categoria": "ramos",
+      "ocasion": "cumpleanos",
+      "imagen": "images/productos/ramo-lila-festivo.png",
+      "disponible": true,
+      "destacado": true
+    },
+    {
+      "id": "arreglo-graduacion",
+      "nombre": "Orgullo de Graduación",
+      "descripcion": "Caja rígida negra coronada con birrete de graduación y un jardín de rosas fucsia, claveles, astromelias y gerberas en tonos rosa y crema. El regalo perfecto para celebrar ese gran logro.",
+      "precio": 1450,
+      "categoria": "arreglos",
+      "ocasion": "graduacion",
+      "imagen": "images/productos/arreglo-graduacion.png",
+      "disponible": true,
+      "destacado": true
+    }
+  ],
+  "ocasiones": [
+    { "id": "aniversario", "nombre": "Aniversario y amor" },
+    { "id": "cumpleanos", "nombre": "Cumpleaños" },
+    { "id": "graduacion", "nombre": "Graduación" },
+    { "id": "agradecimiento", "nombre": "Agradecimiento" },
+    { "id": "detalle", "nombre": "Un detalle" }
+  ],
+  "categorias": [
+    { "id": "ramos", "nombre": "Ramos" },
+    { "id": "canastas", "nombre": "Canastas" },
+    { "id": "arreglos", "nombre": "Arreglos" }
+  ]
+}

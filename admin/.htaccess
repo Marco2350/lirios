@@ -1,0 +1,9 @@
+# Capa extra de protección del panel (la sesión PHP ya protege cada página)
+
+# No listar el contenido del directorio
+Options -Indexes
+
+# Bloquear acceso directo a los includes (config, auth, functions)
+<FilesMatch "^(config|auth|functions|layout)\.php$">
+  Require all denied
+</FilesMatch>

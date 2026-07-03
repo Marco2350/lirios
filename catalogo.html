@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo de arreglos — Lirios Floristería</title>
+  <meta name="description" content="Explora ramos, canastas y arreglos florales de Lirios Floristería en El Progreso, Yoro. Filtra por ocasión y precio, y pide por WhatsApp.">
+  <meta property="og:title" content="Catálogo de arreglos — Lirios Floristería">
+  <meta property="og:description" content="Ramos, canastas y arreglos florales para toda ocasión. Pide por WhatsApp.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="images/productos/canasta-primaveral.png">
+  <meta property="og:locale" content="es_HN">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html">
+        <img src="images/logo.png" alt="Lirios Floristería — inicio">
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+        <a href="index.html">Inicio</a>
+        <a href="catalogo.html" aria-current="page">Catálogo</a>
+        <a href="personalizar.html">Personalizar</a>
+        <a href="nosotros.html">Nosotros</a>
+        <a href="contacto.html">Contacto</a>
+      </nav>
+      <div class="header-actions">
+        <a class="cart-link" href="carrito.html" aria-label="Ver carrito">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1.6"/><circle cx="19" cy="21" r="1.6"/><path d="M2.5 3h2l2.6 12.4a1.8 1.8 0 0 0 1.8 1.4h9.7a1.8 1.8 0 0 0 1.8-1.4L22 7H6"/></svg>
+          <span class="cart-count" id="cart-count" hidden>0</span>
+        </a>
+        <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Abrir menú">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <div class="page-head container">
+      <span class="eyebrow">Colección</span>
+      <h1>Arreglos para cada momento</h1>
+      <p>Flores frescas seleccionadas. Cada arreglo se compone a mano el día de la entrega.</p>
+    </div>
+
+    <section class="container" style="padding-bottom: clamp(56px, 9vw, 96px)">
+
+      <div class="filter-bar">
+        <div class="filter-field">
+          <label for="filter-ocasion">Ocasión</label>
+          <select id="filter-ocasion">
+            <option value="">Todas las ocasiones</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filter-categoria">Tipo de arreglo</label>
+          <select id="filter-categoria">
+            <option value="">Todos los tipos</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="sort-precio">Ordenar por</label>
+          <select id="sort-precio">
+            <option value="">Recomendados</option>
+            <option value="asc">Precio: menor a mayor</option>
+            <option value="desc">Precio: mayor a menor</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="results-count" id="results-count" aria-live="polite"></p>
+
+      <div class="product-grid" id="catalog-grid">
+        <!-- Se llena desde data/productos.json -->
+      </div>
+
+    </section>
+
+    <section class="section cta-band">
+      <div class="container reveal">
+        <h2>¿Nada te convence del todo?</h2>
+        <p>Crea tu propio ramo: elige flor, color, tamaño y extras, con el precio calculado al instante.</p>
+        <a class="btn" href="personalizar.html">Crear mi ramo</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-top">
+      <div class="footer-brand">
+        <img src="images/logo.png" alt="Lirios Floristería">
+        <p class="footer-tagline">Flores que hablan por ti</p>
+        <div class="social-icons">
+          <a href="https://www.instagram.com/liriosfloristeriahn/?hl=es" target="_blank" rel="noopener" aria-label="Instagram de Lirios Floristería">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg>
+          </a>
+          <a href="https://www.facebook.com/p/Lirios-Florister%C3%ADa-61563818806306/" target="_blank" rel="noopener" aria-label="Facebook de Lirios Floristería">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </a>
+          <a href="https://wa.me/50487502362" target="_blank" rel="noopener" aria-label="WhatsApp de Lirios Floristería">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a9.9 9.9 0 0 0-8.5 15.1L2 22l5-1.4A10 10 0 1 0 12 2Zm5.2 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.2c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.9 1.8.3.2.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4.1.2.1.7-.1 1.3Z"/></svg>
+          </a>
+        </div>
+      </div>
+      <nav class="footer-col" aria-label="Enlaces del sitio">
+        <h4>Explora</h4>
+        <ul>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="personalizar.html">Personaliza tu ramo</a></li>
+          <li><a href="carrito.html">Carrito</a></li>
+          <li><a href="nosotros.html">Nosotros</a></li>
+          <li><a href="contacto.html">Contacto</a></li>
+        </ul>
+      </nav>
+      <div class="footer-col">
+        <h4>Horario</h4>
+        <ul>
+          <li>Lunes a sábado<br><strong>8:30 a.m. – 6:00 p.m.</strong></li>
+          <li>Domingo<br><strong>10:00 a.m. – 4:00 p.m.</strong></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Visítanos</h4>
+        <ul>
+          <li>Plaza Rosamanda, local 1<br>Salida a Santa Rita<br>El Progreso, Yoro</li>
+          <li><a href="tel:+50487502362">+504 8750-2362</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <span>© <span id="year"></span> Lirios Floristería</span>
+        <span>El Progreso · Yoro · Honduras</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Con file:// el navegador bloquea los módulos JS: avisar cómo abrir el sitio
+    if (location.protocol === 'file:') {
+      document.body.insertAdjacentHTML('afterbegin',
+        '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo, el personalizador y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/productos.js"></script>
+</body>
+</html>

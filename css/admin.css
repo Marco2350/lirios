@@ -1,0 +1,458 @@
+/* ==========================================================================
+   Panel de administración — Lirios Floristería
+   Usa la misma paleta de marca definida en styles.css / CLAUDE.md
+   ========================================================================== */
+
+:root {
+  --mostaza: #C8860B;
+  --mostaza-dark: #A66E08;
+  --mostaza-light: #E8B85C;
+  --crema: #FFF9F0;
+  --crema-suave: #FFF3E0;
+  --carbon: #2B2118;
+  --gris-calido: #7A6B58;
+  --blanco: #FFFFFF;
+  --whatsapp-green: #25D366;
+  --error: #B3423A;
+  --radius: 12px;
+  --shadow: 0 4px 18px rgba(43, 33, 24, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--carbon);
+  background-color: var(--crema);
+}
+
+a {
+  color: var(--mostaza-dark);
+}
+
+h1, h2, h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+}
+
+/* ---------- Barra superior ---------- */
+.admin-topbar {
+  background-color: var(--carbon);
+  color: var(--crema);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 4%;
+  flex-wrap: wrap;
+}
+
+.admin-topbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--mostaza-light);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-topbar .brand img {
+  height: 38px;
+  background: var(--blanco);
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.admin-nav a {
+  color: var(--crema);
+  text-decoration: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+
+.admin-nav a:hover {
+  background-color: rgba(255, 249, 240, 0.12);
+}
+
+.admin-nav a.activo {
+  background-color: var(--mostaza);
+  color: var(--blanco);
+}
+
+.admin-nav a.salir {
+  color: var(--mostaza-light);
+}
+
+/* ---------- Contenido ---------- */
+.admin-main {
+  width: min(1080px, 92%);
+  margin: 2rem auto 4rem;
+}
+
+.admin-main > p.intro {
+  color: var(--gris-calido);
+  max-width: 70ch;
+}
+
+.panel {
+  background-color: var(--blanco);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  margin-bottom: 1.8rem;
+}
+
+.panel h2 {
+  font-size: 1.3rem;
+  border-bottom: 2px solid var(--crema-suave);
+  padding-bottom: 0.5rem;
+}
+
+/* ---------- Mensajes flash ---------- */
+.flash {
+  padding: 0.8rem 1.1rem;
+  border-radius: 10px;
+  margin-bottom: 1.2rem;
+  font-weight: 500;
+}
+
+.flash.ok {
+  background-color: #E6F8ED;
+  color: #14683A;
+  border: 1px solid #9ADBB4;
+}
+
+.flash.error {
+  background-color: #FBEAE9;
+  color: var(--error);
+  border: 1px solid #E5B5B1;
+}
+
+/* ---------- Tablas ---------- */
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.tabla th,
+.tabla td {
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--crema-suave);
+  vertical-align: middle;
+}
+
+.tabla th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gris-calido);
+}
+
+.tabla img.mini {
+  width: 46px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--crema-suave);
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+}
+
+.badge.si {
+  background-color: #E6F8ED;
+  color: #14683A;
+}
+
+.badge.no {
+  background-color: #FBEAE9;
+  color: var(--error);
+}
+
+/* ---------- Formularios ---------- */
+label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="file"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1.5px solid rgba(122, 107, 88, 0.35);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--carbon);
+  background-color: var(--blanco);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--mostaza);
+  outline: none;
+}
+
+input[type="color"] {
+  width: 52px;
+  height: 38px;
+  padding: 2px;
+  border: 1.5px solid rgba(122, 107, 88, 0.35);
+  border-radius: 8px;
+  background: var(--blanco);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
+}
+
+.check-row input {
+  width: 17px;
+  height: 17px;
+}
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.3rem;
+  border-radius: 999px;
+  border: 2px solid var(--mostaza);
+  background-color: var(--mostaza);
+  color: var(--blanco);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:hover {
+  background-color: var(--mostaza-dark);
+  border-color: var(--mostaza-dark);
+}
+
+.btn.secundario {
+  background-color: transparent;
+  color: var(--mostaza-dark);
+}
+
+.btn.secundario:hover {
+  background-color: var(--crema-suave);
+}
+
+.btn.peligro {
+  background-color: transparent;
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.btn.peligro:hover {
+  background-color: var(--error);
+  color: var(--blanco);
+}
+
+.btn.mini {
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8rem;
+}
+
+.acciones-fila {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+form.inline {
+  display: inline;
+}
+
+/* ---------- Login ---------- */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.login-card {
+  background-color: var(--blanco);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 2.2rem;
+  width: min(380px, 100%);
+  text-align: center;
+}
+
+.login-card img {
+  height: 70px;
+  margin-bottom: 1rem;
+}
+
+.login-card h1 {
+  font-size: 1.4rem;
+}
+
+.login-card p {
+  color: var(--gris-calido);
+  font-size: 0.9rem;
+}
+
+.login-card form {
+  text-align: left;
+  margin-top: 1.2rem;
+}
+
+.login-card .btn {
+  width: 100%;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* ---------- Dashboard ---------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.2rem;
+}
+
+.card-grid a.tarjeta {
+  display: block;
+  background-color: var(--blanco);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  text-decoration: none;
+  color: var(--carbon);
+  border: 2px solid transparent;
+}
+
+.card-grid a.tarjeta:hover {
+  border-color: var(--mostaza-light);
+}
+
+.card-grid .tarjeta h2 {
+  font-size: 1.15rem;
+  color: var(--mostaza-dark);
+  border: none;
+  padding: 0;
+}
+
+.card-grid .tarjeta p {
+  color: var(--gris-calido);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.stats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.8rem;
+}
+
+.stat {
+  background-color: var(--crema-suave);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.4rem;
+}
+
+.stat .num {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--mostaza-dark);
+  display: block;
+  line-height: 1.1;
+}
+
+.stat .lbl {
+  font-size: 0.8rem;
+  color: var(--gris-calido);
+}
+
+/* ---------- Galería de imágenes ---------- */
+.img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 1rem;
+}
+
+.img-grid figure {
+  margin: 0;
+  text-align: center;
+}
+
+.img-grid img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--crema-suave);
+}
+
+.img-grid figcaption {
+  font-size: 0.75rem;
+  color: var(--gris-calido);
+  word-break: break-all;
+  margin-top: 0.3rem;
+}
+
+.color-preview {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--blanco);
+  box-shadow: 0 0 0 1px rgba(122, 107, 88, 0.4);
+  vertical-align: middle;
+}
