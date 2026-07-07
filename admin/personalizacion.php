@@ -1,8 +1,12 @@
 <?php
 /**
  * Editor de las opciones del personalizador de ramos
- * (data/opciones-personalizacion.json): flores, colores,
- * tamaños y extras, cada uno con su precio o recargo.
+ * (data/opciones-personalizacion.json): tipos de flor (con su
+ * forma en el dibujo), colores, papeles de envoltura, listones
+ * y extras — cada uno con su precio.
+ *
+ * Precio del ramo = (precio por tallo × cantidad de cada flor)
+ *                 + papel + listón + extras marcados.
  *
  * Nota de estructura: los <form> viven FUERA de la tabla y los
  * inputs de cada fila se asocian con el atributo form="id",
@@ -15,25 +19,52 @@ require_once __DIR__ . '/includes/layout.php';
 
 verificar_csrf();
 
-/* Definición de las secciones editables y sus campos */
+/* Formas de flor disponibles en el dibujo del preview (personalizar.js) */
+$formasFlor = [
+    'rose' => 'Rosa',
+    'sunflower' => 'Girasol',
+    'lily' => 'Lirio',
+    'gerbera' => 'Gerbera',
+    'tulip' => 'Tulipán',
+    'carnation' => 'Clavel',
+    'daisy' => 'Margarita',
+    'aster' => 'Astromelia',
+    'mixed' => 'Mixta (varía por tallo)',
+];
+
+/*
+ * Secciones editables. Cada campo extra define su tipo:
+ *   ['color', 'Etiqueta']            → selector de color
+ *   ['texto', 'Etiqueta']            → texto corto
+ *   ['select', 'Etiqueta', opciones] → lista desplegable
+ */
 $secciones = [
     'flores' => [
         'titulo' => 'Tipos de flor',
         'campoPrecio' => 'precio',
-        'etiquetaPrecio' => 'Precio base (L.)',
-        'extraCampos' => [],
+        'etiquetaPrecio' => 'Precio por tallo (L.)',
+        'extraCampos' => ['kind' => ['select', 'Forma en el dibujo', $formasFlor]],
     ],
     'colores' => [
-        'titulo' => 'Colores dominantes',
+        'titulo' => 'Colores de flor',
         'campoPrecio' => null,
         'etiquetaPrecio' => null,
-        'extraCampos' => ['css' => 'Color (visual)'],
+        'extraCampos' => ['css' => ['color', 'Color (visual)']],
     ],
-    'tamanos' => [
-        'titulo' => 'Tamaños',
-        'campoPrecio' => 'recargo',
-        'etiquetaPrecio' => 'Recargo (L.)',
-        'extraCampos' => ['detalle' => 'Detalle (ej. 10–14 tallos)'],
+    'wraps' => [
+        'titulo' => 'Papeles de envoltura',
+        'campoPrecio' => 'precio',
+        'etiquetaPrecio' => 'Precio (L.)',
+        'extraCampos' => [
+            'color' => ['color', 'Color del papel'],
+            'description' => ['texto', 'Descripción corta'],
+        ],
+    ],
+    'ribbons' => [
+        'titulo' => 'Listones',
+        'campoPrecio' => 'precio',
+        'etiquetaPrecio' => 'Precio (L.)',
+        'extraCampos' => ['color' => ['color', 'Color del listón']],
     ],
     'extras' => [
         'titulo' => 'Extras',
@@ -74,15 +105,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($conf['campoPrecio']) {
                 $item[$conf['campoPrecio']] = limpiar_precio($_POST['valor'] ?? 0);
             }
-            foreach ($conf['extraCampos'] as $campo => $etiqueta) {
-                if ($campo === 'css') {
-                    // Acepta un color hex del selector; los degradados existentes (mixto) se conservan
-                    $css = limpiar_texto($_POST['css'] ?? '', 120);
-                    $item['css'] = preg_match('/^#[0-9a-fA-F]{3,8}$/', $css) || str_starts_with($css, 'linear-gradient')
-                        ? $css
+            foreach ($conf['extraCampos'] as $campo => $def) {
+                [$tipo] = $def;
+                $valor = limpiar_texto($_POST[$campo] ?? '', 120);
+                if ($tipo === 'color') {
+                    // Acepta hex del selector; los degradados existentes (mixto) se conservan
+                    $item[$campo] = preg_match('/^#[0-9a-fA-F]{3,8}$/', $valor) || str_starts_with($valor, 'linear-gradient')
+                        ? $valor
                         : '#CCCCCC';
+                } elseif ($tipo === 'select') {
+                    $permitidos = array_keys($def[2]);
+                    $item[$campo] = in_array($valor, $permitidos, true) ? $valor : $permitidos[0];
                 } else {
-                    $item[$campo] = limpiar_texto($_POST[$campo] ?? '', 80);
+                    $item[$campo] = $valor;
                 }
             }
 
@@ -130,9 +165,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 admin_header('Opciones de personalización', 'personalizacion.php');
+
+/* Pinta la celda de un campo extra (para filas existentes y fila nueva) */
+function celda_campo(string $fid, string $campo, array $def, ?array $item): void
+{
+    [$tipo, $etiqueta] = $def;
+    $valor = $item[$campo] ?? '';
+
+    if ($tipo === 'color') {
+        if ($item !== null && !preg_match('/^#[0-9a-fA-F]{3,8}$/', $valor)) {
+            // Valor no editable con el selector (ej. degradado "mixto"): se conserva
+            echo '<span class="color-preview" style="background:' . e($valor ?: '#CCC') . '"></span>';
+            echo '<input type="hidden" name="' . e($campo) . '" form="' . e($fid) . '" value="' . e($valor) . '">';
+            echo '<small>degradado</small>';
+        } else {
+            $hex = $item === null ? '#E88BAD' : $valor;
+            echo '<input type="color" name="' . e($campo) . '" form="' . e($fid) . '" value="' . e($hex) . '">';
+        }
+    } elseif ($tipo === 'select') {
+        echo '<select name="' . e($campo) . '" form="' . e($fid) . '">';
+        foreach ($def[2] as $clave => $nombre) {
+            $sel = ($valor === $clave) ? ' selected' : '';
+            echo '<option value="' . e($clave) . '"' . $sel . '>' . e($nombre) . '</option>';
+        }
+        echo '</select>';
+    } else {
+        $ph = $item === null ? ' placeholder="' . e($etiqueta) . '"' : '';
+        echo '<input type="text" name="' . e($campo) . '" maxlength="120" form="' . e($fid) . '" value="' . e($valor) . '"' . $ph . '>';
+    }
+}
 ?>
 
-<p class="intro">Estas opciones arman el formulario de <strong>“Personaliza tu ramo”</strong> del sitio. El precio final del ramo es: <em>precio base de la flor + recargo del tamaño + extras marcados</em>. Los cambios se publican al guardar.</p>
+<p class="intro">Estas opciones arman el constructor de <strong>“Personaliza tu ramo”</strong> del sitio. El precio del ramo es: <em>precio por tallo × cantidad de cada flor + papel de envoltura + listón + extras marcados</em>. Los cambios se publican al guardar.</p>
 
 <?php foreach ($secciones as $clave => $conf): ?>
 <div class="panel">
@@ -143,7 +207,7 @@ admin_header('Opciones de personalización', 'personalizacion.php');
         <tr>
           <th>Nombre</th>
           <?php if ($conf['campoPrecio']): ?><th><?= e($conf['etiquetaPrecio']) ?></th><?php endif; ?>
-          <?php foreach ($conf['extraCampos'] as $campo => $etiqueta): ?><th><?= e($etiqueta) ?></th><?php endforeach; ?>
+          <?php foreach ($conf['extraCampos'] as $campo => $def): ?><th><?= e($def[1]) ?></th><?php endforeach; ?>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -158,20 +222,8 @@ admin_header('Opciones de personalización', 'personalizacion.php');
           <?php if ($conf['campoPrecio']): ?>
             <td style="max-width:140px"><input type="number" name="valor" min="0" step="0.01" form="<?= e($fid) ?>" value="<?= e((string)($item[$conf['campoPrecio']] ?? 0)) ?>"></td>
           <?php endif; ?>
-          <?php foreach ($conf['extraCampos'] as $campo => $etiqueta): ?>
-            <td>
-              <?php if ($campo === 'css'): ?>
-                <?php if (preg_match('/^#[0-9a-fA-F]{3,8}$/', $item['css'] ?? '')): ?>
-                  <input type="color" name="css" form="<?= e($fid) ?>" value="<?= e($item['css']) ?>">
-                <?php else: ?>
-                  <span class="color-preview" style="background:<?= e($item['css'] ?? '#CCC') ?>"></span>
-                  <input type="hidden" name="css" form="<?= e($fid) ?>" value="<?= e($item['css'] ?? '') ?>">
-                  <small>degradado (mixto)</small>
-                <?php endif; ?>
-              <?php else: ?>
-                <input type="text" name="<?= e($campo) ?>" maxlength="80" form="<?= e($fid) ?>" value="<?= e($item[$campo] ?? '') ?>">
-              <?php endif; ?>
-            </td>
+          <?php foreach ($conf['extraCampos'] as $campo => $def): ?>
+            <td><?php celda_campo($fid, $campo, $def, $item); ?></td>
           <?php endforeach; ?>
           <td>
             <div class="acciones-fila">
@@ -189,14 +241,8 @@ admin_header('Opciones de personalización', 'personalizacion.php');
           <?php if ($conf['campoPrecio']): ?>
             <td style="max-width:140px"><input type="number" name="valor" min="0" step="0.01" form="<?= e($fnew) ?>" placeholder="0.00"></td>
           <?php endif; ?>
-          <?php foreach ($conf['extraCampos'] as $campo => $etiqueta): ?>
-            <td>
-              <?php if ($campo === 'css'): ?>
-                <input type="color" name="css" form="<?= e($fnew) ?>" value="#E88BAD">
-              <?php else: ?>
-                <input type="text" name="<?= e($campo) ?>" maxlength="80" form="<?= e($fnew) ?>" placeholder="<?= e($etiqueta) ?>">
-              <?php endif; ?>
-            </td>
+          <?php foreach ($conf['extraCampos'] as $campo => $def): ?>
+            <td><?php celda_campo($fnew, $campo, $def, null); ?></td>
           <?php endforeach; ?>
           <td><button type="submit" class="btn mini secundario" form="<?= e($fnew) ?>">+ Agregar</button></td>
         </tr>

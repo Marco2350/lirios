@@ -46,12 +46,13 @@
 
     <!-- Hero - Contemporáneo y lujoso -->
     <section class="hero">
+      <span class="hero-watermark" aria-hidden="true">Lirios</span>
       <div class="container hero-grid">
         <div class="hero-copy">
           <div class="hero-eyebrow">
             <span class="eyebrow">El Progreso, Yoro</span>
           </div>
-          <h1>Flores que<br>dicen lo que<br>las palabras no alcanzan.</h1>
+          <h1>Flores que<br>dicen lo que<br>las palabras <em>no alcanzan.</em></h1>
           <p class="hero-lead">Arreglos excepcionales hechos a mano con flores frescas de temporada. Elige del catálogo o diseña tu propio ramo.</p>
 
           <div class="hero-actions">
@@ -76,30 +77,49 @@
         </div>
 
         <div class="hero-carousel" id="hero-carousel" aria-label="Galería de arreglos destacados">
-          <div class="carousel-frame">
-            <figure class="carousel-slide is-active" data-nombre="Ramo Alba Rosa" data-href="producto.html?id=ramo-alba-rosa">
-              <img src="images/productos/ramo-alba-rosa.png" alt="Ramo de lirios y gerberas rosadas envuelto en papel blanco" fetchpriority="high">
-              <div class="img-overlay"></div>
-            </figure>
-            <figure class="carousel-slide" data-nombre="Ramo Dulce Amor" data-href="producto.html?id=ramo-dulce-amor">
-              <img src="images/productos/ramo-dulce-amor.png" alt="Ramo de rosas rojas con chocolates finos" loading="lazy">
-              <div class="img-overlay"></div>
-            </figure>
-            <figure class="carousel-slide" data-nombre="Canasta Primaveral" data-href="producto.html?id=canasta-primaveral">
-              <img src="images/productos/canasta-primaveral.png" alt="Canasta artesanal con lirios rosados y gerberas" loading="lazy">
-              <div class="img-overlay"></div>
-            </figure>
-            <figure class="carousel-slide" data-nombre="Orgullo de Graduación" data-href="producto.html?id=arreglo-graduacion">
-              <img src="images/productos/arreglo-graduacion.png" alt="Arreglo de graduación con birrete y flores rosadas" loading="lazy">
-              <div class="img-overlay"></div>
-            </figure>
-            <figure class="carousel-slide" data-nombre="Ramo Lila Festivo" data-href="producto.html?id=ramo-lila-festivo">
-              <img src="images/productos/ramo-lila-festivo.png" alt="Ramo de gerberas bicolor con envoltura lila" loading="lazy">
-              <div class="img-overlay"></div>
-            </figure>
+          <div class="frame-stack">
 
-            <div class="carousel-tag">
-              <a href="producto.html?id=ramo-alba-rosa">Ramo Alba Rosa</a>
+            <!-- Sello giratorio: hecho a mano -->
+            <div class="hero-badge" aria-hidden="true">
+              <svg class="badge-ring" viewBox="0 0 120 120">
+                <defs>
+                  <path id="badge-circle" d="M60,60 m-45,0 a45,45 0 1,1 90,0 a45,45 0 1,1 -90,0"/>
+                </defs>
+                <text>
+                  <textPath href="#badge-circle">HECHO A MANO · FLORES FRESCAS ·</textPath>
+                </text>
+              </svg>
+              <svg class="badge-leaf" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8a10 10 0 0 1-10 10Z"/>
+                <path d="M2 21c0-3 1.9-5.5 3.5-7"/>
+              </svg>
+            </div>
+
+            <div class="carousel-frame">
+              <figure class="carousel-slide is-active" data-nombre="Ramo Alba Rosa" data-precio="850" data-href="producto.html?id=ramo-alba-rosa">
+                <img src="images/productos/ramo-alba-rosa.png" alt="Ramo de lirios y gerberas rosadas envuelto en papel blanco" fetchpriority="high">
+                <div class="img-overlay"></div>
+              </figure>
+              <figure class="carousel-slide" data-nombre="Ramo Dulce Amor" data-precio="950" data-href="producto.html?id=ramo-dulce-amor">
+                <img src="images/productos/ramo-dulce-amor.png" alt="Ramo de rosas rojas con chocolates finos" loading="lazy">
+                <div class="img-overlay"></div>
+              </figure>
+              <figure class="carousel-slide" data-nombre="Canasta Primaveral" data-precio="1150" data-href="producto.html?id=canasta-primaveral">
+                <img src="images/productos/canasta-primaveral.png" alt="Canasta artesanal con lirios rosados y gerberas" loading="lazy">
+                <div class="img-overlay"></div>
+              </figure>
+              <figure class="carousel-slide" data-nombre="Orgullo de Graduación" data-precio="1450" data-href="producto.html?id=arreglo-graduacion">
+                <img src="images/productos/arreglo-graduacion.png" alt="Arreglo de graduación con birrete y flores rosadas" loading="lazy">
+                <div class="img-overlay"></div>
+              </figure>
+              <figure class="carousel-slide" data-nombre="Ramo Lila Festivo" data-precio="750" data-href="producto.html?id=ramo-lila-festivo">
+                <img src="images/productos/ramo-lila-festivo.png" alt="Ramo de gerberas bicolor con envoltura lila" loading="lazy">
+                <div class="img-overlay"></div>
+              </figure>
+
+              <div class="carousel-tag">
+                <a href="producto.html?id=ramo-alba-rosa">Ramo Alba Rosa <span class="tag-price">L. 850.00</span></a>
+              </div>
             </div>
           </div>
           <div class="carousel-controls">
@@ -113,10 +133,14 @@
           </div>
         </div>
       </div>
+
+      <a class="hero-scroll" href="#destacados" aria-label="Bajar a los arreglos destacados">
+        <span class="hero-scroll-line"></span>
+      </a>
     </section>
 
     <!-- Destacados -->
-    <section class="section">
+    <section class="section" id="destacados">
       <div class="container">
         <div class="section-head centered">
           <h2>Los más elegidos</h2>

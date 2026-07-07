@@ -53,6 +53,13 @@
     <section class="container" style="padding-bottom: clamp(56px, 9vw, 96px)">
       <div class="personalizer-container">
 
+        <!-- Mini-barra móvil: aparece cuando la vista previa sale de pantalla -->
+        <div class="preview-minibar" id="preview-minibar" aria-hidden="true">
+          <span class="minibar-flowers" id="minibar-flores">Vacío</span>
+          <strong id="minibar-total">L. 0.00</strong>
+          <button type="button" id="minibar-ver">Ver ramo ↑</button>
+        </div>
+
         <div class="personalizer-grid">
 
           <!-- PREVIEW + SUMMARY -->
@@ -78,6 +85,17 @@
                   </pattern>
 
                   <!-- Soft premium flower shadow -->
+                  <filter id="flowerShadow" x="-80%" y="-80%" width="260%" height="260%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="2.6"/>
+                    <feOffset dx="1.2" dy="3.5" result="offsetblur"/>
+                    <feComponentTransfer>
+                      <feFuncA type="linear" slope="0.22"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
 
                   <!-- Petal soft light / volume -->
                   <linearGradient id="petalLight" x1="20%" y1="15%" x2="75%" y2="92%">
@@ -121,29 +139,28 @@
                 <!-- Very soft top studio light / reflection for premium photography feel -->
                 <ellipse cx="102" cy="38" rx="71" ry="29" fill="#fff" opacity="0.065"/>
 
-                <!-- Luxurious paper wrap - multi-layer for depth -->
-                <path id="wrap" 
-                      d="M22 162 Q100 222 178 162 Q176 192 100 203 Q24 192 22 162" 
-                      fill="#e8d9c4" stroke="#d1bea0" stroke-width="2"/>
-                <!-- Paper top rim / lip -->
-                <path id="wrap-rim" d="M28 164 Q100 218 172 164" fill="none" stroke="#fff" stroke-width="5.5" opacity="0.38"/>
-                <!-- Soft fold crease -->
-                <path id="wrap-fold" d="M48 175 Q100 189 152 175" fill="none" stroke="#d1bea0" stroke-width="1.8" opacity="0.55"/>
-                <!-- Volume shading on wrap -->
-                <path id="wrap-shade" d="M30 168 Q100 208 170 168 Q100 198 30 168" fill="none" stroke="#000" stroke-width="9" opacity="0.045"/>
-                <!-- Extra paper depth layer -->
-                <path d="M26 166 Q100 215 174 166" fill="none" stroke="#000" stroke-width="11" opacity="0.035"/>
+                <!-- Sombra de apoyo del ramo (posición dinámica) -->
+                <ellipse id="ground-shadow" cx="100" cy="214" rx="46" ry="7" fill="#2B2118" opacity="0.08"/>
 
-                <!-- Dynamic natural stems -->
-                <g id="stems" stroke="#4f3f2e" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"></g>
+                <!-- Papel: abanico trasero con picos y cara interna (d dinámico) -->
+                <path id="wrap-back" d="" fill="#efe3cf"/>
+                <path id="wrap-inner" d="" fill="#dcc9ab"/>
 
-                <!-- Dynamic elegant leaves -->
-                <g id="leaves" fill="#3f5133" opacity="0.28"></g>
+                <!-- Tallos (visibles entre la cúpula y el cono) -->
+                <g id="stems"></g>
 
-                <!-- Dynamic flowers (the stars) -->
+                <!-- Follaje: eucalipto y hojas -->
+                <g id="leaves"></g>
+
+                <!-- Flores en cúpula (las protagonistas) -->
                 <g id="flowers"></g>
 
-                <!-- Dynamic luxurious ribbon -->
+                <!-- Cono frontal del papel: termina en punta (d dinámico) -->
+                <path id="wrap" d="" fill="#e8d9c4" stroke="#d1bea0" stroke-width="1.6" stroke-linejoin="round"/>
+                <path id="wrap-rim" d="" fill="none" stroke="#fff" stroke-width="2.4" opacity="0.4"/>
+                <path id="wrap-fold" d="" fill="none" stroke="#d1bea0" stroke-width="1.1" opacity="0.6"/>
+
+                <!-- Listón con moño en la cintura -->
                 <g id="ribbon-visual"></g>
               </svg>
             </div>
@@ -169,7 +186,7 @@
           <form id="builder-form">
             <div style="margin-bottom:12px;">
               <div style="color:#C8860B; font-size:11px; letter-spacing:1px; text-transform:uppercase; font-weight:600;">Tu ramo, tus reglas</div>
-              <h1 style="font-family:var(--font-display); font-size:25px; margin:3px 0 0; line-height:1.05;">Diseña tu ramo flor por flor.</h1>
+              <h2 style="font-family:var(--font-display); font-size:25px; margin:3px 0 0; line-height:1.05;">Diseña tu ramo flor por flor.</h2>
             </div>
 
             <!-- 1. Flores -->
@@ -190,10 +207,16 @@
               <div id="opt-ribbons" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 5px;"></div>
             </div>
 
-            <!-- 4. Dedicatoria -->
+            <!-- 4. Extras -->
             <div class="option-section">
-              <div class="section-title">4. Dedicatoria</div>
-              <textarea id="dedicatoria" placeholder="Para ti, con todo mi amor..."></textarea>
+              <div class="section-title">4. Extras</div>
+              <div id="opt-extras"></div>
+            </div>
+
+            <!-- 5. Dedicatoria -->
+            <div class="option-section">
+              <div class="section-title">5. Dedicatoria</div>
+              <textarea id="dedicatoria" maxlength="240" placeholder="Para ti, con todo mi amor..."></textarea>
               <div class="hint">La escribimos a mano. Máx 240 caracteres.</div>
             </div>
 

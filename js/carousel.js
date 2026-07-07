@@ -5,6 +5,8 @@
    cursor. Respeta prefers-reduced-motion (sin auto-avance).
    ========================================================= */
 
+import { formatPrice } from './cart.js';
+
 const root = document.getElementById('hero-carousel');
 
 function initCarousel() {
@@ -13,7 +15,8 @@ function initCarousel() {
   const slides = [...root.querySelectorAll('.carousel-slide')];
   if (slides.length < 2) return;
 
-  const tag = root.querySelector('.carousel-tag');
+  /* El tag es un <div> con un <a> adentro: se actualiza el enlace, no el div */
+  const tag = root.querySelector('.carousel-tag a');
   const dotsWrap = root.querySelector('.carousel-dots');
   const frame = root.querySelector('.carousel-frame');
   const INTERVALO = 5500;
@@ -35,15 +38,25 @@ function initCarousel() {
   });
 
   function go(n) {
-    slides[actual].classList.remove('is-active');
     dots[actual].classList.remove('is-active');
     actual = (n + slides.length) % slides.length;
-    slides[actual].classList.add('is-active');
+
+    /* Baraja 3D: activa al frente, vecinas asomando detrás */
+    const prev = (actual - 1 + slides.length) % slides.length;
+    const next = (actual + 1) % slides.length;
+    slides.forEach((s, i) => {
+      s.classList.toggle('is-active', i === actual);
+      s.classList.toggle('is-prev', i === prev);
+      s.classList.toggle('is-next', i === next);
+    });
     dots[actual].classList.add('is-active');
 
-    const { nombre, href } = slides[actual].dataset;
+    const { nombre, href, precio } = slides[actual].dataset;
     if (tag && nombre) {
-      tag.textContent = nombre;
+      const precioHtml = precio
+        ? ` <span class="tag-price">${formatPrice(precio)}</span>`
+        : '';
+      tag.innerHTML = nombre + precioHtml;
       tag.href = href || '#';
     }
   }
@@ -89,6 +102,24 @@ function initCarousel() {
     go(delta < 0 ? actual + 1 : actual - 1);
     reiniciar();
   });
+
+  /* Tilt 3D sutil siguiendo el cursor (solo puntero fino, sin reduced motion) */
+  if (!reduceMotion && window.matchMedia('(pointer: fine)').matches) {
+    let rafId = null;
+    frame.addEventListener('mousemove', (e) => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const rect = frame.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width - 0.5;
+        const py = (e.clientY - rect.top) / rect.height - 0.5;
+        frame.style.transform = `rotateY(${px * 7}deg) rotateX(${py * -5}deg)`;
+      });
+    });
+    frame.addEventListener('mouseleave', () => {
+      frame.style.transform = '';
+    });
+  }
 
   go(0);
   reiniciar();

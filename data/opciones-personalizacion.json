@@ -3,6 +3,10 @@
     { "id": "rosas", "nombre": "Rosas", "precio": 450, "kind": "rose" },
     { "id": "girasoles", "nombre": "Girasoles", "precio": 400, "kind": "sunflower" },
     { "id": "lirios", "nombre": "Lirios", "precio": 500, "kind": "lily" },
+    { "id": "gerberas", "nombre": "Gerberas", "precio": 380, "kind": "gerbera" },
+    { "id": "tulipanes", "nombre": "Tulipanes", "precio": 650, "kind": "tulip" },
+    { "id": "claveles", "nombre": "Claveles", "precio": 300, "kind": "carnation" },
+    { "id": "margaritas", "nombre": "Margaritas", "precio": 320, "kind": "daisy" },
     { "id": "astromelias", "nombre": "Astromelias", "precio": 350, "kind": "aster" },
     { "id": "mixto", "nombre": "Ramo mixto", "precio": 480, "kind": "mixed" }
   ],
@@ -11,6 +15,8 @@
     { "id": "rosado", "nombre": "Rosado", "css": "#E88BAD" },
     { "id": "blanco", "nombre": "Blanco", "css": "#F5EFE6" },
     { "id": "amarillo", "nombre": "Amarillo", "css": "#E7C544" },
+    { "id": "lila", "nombre": "Lila", "css": "#B497D6" },
+    { "id": "naranja", "nombre": "Naranja", "css": "#E8894A" },
     { "id": "mixto", "nombre": "Mixto", "css": "linear-gradient(135deg, #B3261E 0%, #E7C544 50%, #B497D6 100%)" }
   ],
   "wraps": [
