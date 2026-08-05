@@ -1,38 +1,8 @@
 <?php
 /**
- * Utilidades del panel: lectura/escritura segura de JSON
- * (con bloqueo de archivo) y helpers de saneamiento.
+ * Utilidades del panel: saneamiento de formularios y helpers
+ * para trabajar con la base de datos MySQL (ver config/db.php).
  */
-
-/** Lee un archivo JSON y lo devuelve como arreglo asociativo. */
-function leer_json(string $ruta): array
-{
-    if (!is_file($ruta)) {
-        return [];
-    }
-    $contenido = file_get_contents($ruta);
-    $datos = json_decode($contenido, true);
-    if (json_last_error() !== JSON_ERROR_NONE || !is_array($datos)) {
-        return [];
-    }
-    return $datos;
-}
-
-/**
- * Escribe un arreglo como JSON con bloqueo exclusivo (flock)
- * para evitar corrupción si dos cambios ocurren a la vez.
- */
-function guardar_json(string $ruta, array $datos): bool
-{
-    $json = json_encode(
-        $datos,
-        JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-    );
-    if ($json === false) {
-        return false;
-    }
-    return file_put_contents($ruta, $json, LOCK_EX) !== false;
-}
 
 /** Escapa texto para mostrarlo en HTML. */
 function e(?string $texto): string
@@ -40,7 +10,7 @@ function e(?string $texto): string
     return htmlspecialchars((string) $texto, ENT_QUOTES, 'UTF-8');
 }
 
-/** Convierte un nombre en un slug apto para id ("Ramo Alba Rosa" → "ramo-alba-rosa"). */
+/** Convierte un nombre en un slug apto para URL ("Ramo Alba Rosa" → "ramo-alba-rosa"). */
 function slugify(string $texto): string
 {
     $texto = mb_strtolower(trim($texto), 'UTF-8');
@@ -67,15 +37,111 @@ function limpiar_precio($valor): float
     return max(0, round($numero, 2));
 }
 
-/** Genera un id único dentro de una lista de items con clave 'id'. */
-function id_unico(string $base, array $items): string
+/**
+ * Genera un slug único dentro de una tabla, agregando "-2", "-3"...
+ * si ya existe (opcionalmente ignorando la propia fila al editar).
+ */
+function slug_unico(string $tabla, string $slugBase, ?int $excluirId = null): string
 {
-    $ids = array_column($items, 'id');
-    $id = $base;
+    $slug = $slugBase;
     $n = 2;
-    while (in_array($id, $ids, true)) {
-        $id = $base . '-' . $n;
+    $sql = "SELECT COUNT(*) FROM {$tabla} WHERE slug = :slug" . ($excluirId ? ' AND id != :id' : '');
+    $stmt = db()->prepare($sql);
+    while (true) {
+        $params = ['slug' => $slug];
+        if ($excluirId) {
+            $params['id'] = $excluirId;
+        }
+        $stmt->execute($params);
+        if ((int) $stmt->fetchColumn() === 0) {
+            return $slug;
+        }
+        $slug = $slugBase . '-' . $n;
         $n++;
     }
-    return $id;
+}
+
+/* ---------- Subida de fotos de producto (compartida por productos.php y subir-imagen.php) ---------- */
+
+const IMAGEN_MAX_BYTES = 3 * 1024 * 1024; // 3 MB
+const IMAGEN_EXTENSIONES_VALIDAS = ['jpg', 'jpeg', 'png', 'webp'];
+const IMAGEN_MIMES_VALIDOS = ['image/jpeg', 'image/png', 'image/webp'];
+
+/** Carga una imagen (jpg/png/webp) como recurso GD según su mime real. */
+function cargar_imagen_gd(string $ruta, string $mime)
+{
+    return match ($mime) {
+        'image/jpeg' => @imagecreatefromjpeg($ruta),
+        'image/png' => @imagecreatefrompng($ruta),
+        'image/webp' => @imagecreatefromwebp($ruta),
+        default => false,
+    };
+}
+
+/** Genera un nombre de archivo único dentro de IMAGENES_DIR para $base.$ext. */
+function nombre_imagen_unico(string $base, string $ext): array
+{
+    $nombre = $base . '.' . $ext;
+    $n = 2;
+    while (file_exists(IMAGENES_DIR . '/' . $nombre)) {
+        $nombre = $base . '-' . $n . '.' . $ext;
+        $n++;
+    }
+    return [$nombre, IMAGENES_DIR . '/' . $nombre];
+}
+
+/**
+ * Valida y guarda una foto subida ($_FILES[...]) en /images/productos,
+ * convirtiéndola a WebP automáticamente si el servidor tiene GD con
+ * soporte WebP; si no, la guarda tal cual se subió.
+ * Devuelve ['ok' => bool, 'nombre' => string|null, 'error' => string|null].
+ */
+function guardar_imagen_subida(array $archivo): array
+{
+    if ($archivo['error'] !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'nombre' => null, 'error' => 'La subida falló. Verifica que el archivo no pase de 3 MB e intenta de nuevo.'];
+    }
+    if ($archivo['size'] > IMAGEN_MAX_BYTES) {
+        return ['ok' => false, 'nombre' => null, 'error' => 'La foto pesa más de 3 MB. Comprímela antes de subirla (ej. tinypng.com o squoosh.app).'];
+    }
+
+    $ext = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+    $mime = mime_content_type($archivo['tmp_name']);
+    if (!in_array($ext, IMAGEN_EXTENSIONES_VALIDAS, true) || !in_array($mime, IMAGEN_MIMES_VALIDOS, true)) {
+        return ['ok' => false, 'nombre' => null, 'error' => 'Formato no permitido. Sube imágenes JPG, PNG o WebP.'];
+    }
+
+    if (!is_dir(IMAGENES_DIR)) {
+        mkdir(IMAGENES_DIR, 0755, true);
+    }
+
+    $base = slugify(pathinfo($archivo['name'], PATHINFO_FILENAME));
+    $convertirAWebp = $mime !== 'image/webp' && function_exists('imagewebp');
+    $extFinal = $convertirAWebp ? 'webp' : $ext;
+    [$nombre, $destino] = nombre_imagen_unico($base, $extFinal);
+
+    $guardada = false;
+    if ($convertirAWebp) {
+        $imagen = cargar_imagen_gd($archivo['tmp_name'], $mime);
+        if ($imagen !== false) {
+            imagepalettetotruecolor($imagen);
+            imagealphablending($imagen, true);
+            imagesavealpha($imagen, true);
+            $guardada = imagewebp($imagen, $destino, 82);
+            imagedestroy($imagen);
+        }
+    }
+    if (!$guardada) {
+        // GD no disponible, formato no soportado, o ya era WebP: se guarda tal cual.
+        $extFinal = $ext;
+        [$nombre, $destino] = nombre_imagen_unico($base, $extFinal);
+        $guardada = move_uploaded_file($archivo['tmp_name'], $destino);
+    }
+
+    if (!$guardada) {
+        error_log('[lirios] No se pudo guardar la imagen en ' . IMAGENES_DIR . ' — revisar permisos de la carpeta.');
+        return ['ok' => false, 'nombre' => null, 'error' => 'No se pudo guardar la foto en el servidor. Contacta a soporte técnico si el problema continúa.'];
+    }
+
+    return ['ok' => true, 'nombre' => $nombre, 'error' => null];
 }

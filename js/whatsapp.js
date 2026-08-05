@@ -16,7 +16,7 @@ export function buildOrderMessage(cart, total, nombre = '', nota = '') {
   });
 
   return [
-    '¡Hola! Quiero hacer este pedido en Lirios Floristería:',
+    '¡Hola! Quiero hacer este pedido en LIRIOS Floristería:',
     '',
     ...lineas,
     '',
@@ -24,6 +24,8 @@ export function buildOrderMessage(cart, total, nombre = '', nota = '') {
     '',
     `Nombre: ${nombre || '_____'}`,
     `Nota: ${nota || '_____'}`,
+    '',
+    '📎 Les adjunto también la imagen-resumen del pedido con la foto de cada producto.',
   ].join('\n');
 }
 

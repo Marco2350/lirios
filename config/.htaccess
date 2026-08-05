@@ -1,0 +1,2 @@
+# /config nunca se sirve directo: solo lo incluyen los .php del propio sitio
+Require all denied

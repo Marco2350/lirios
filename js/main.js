@@ -10,7 +10,7 @@ import { buildWaLink } from './whatsapp.js';
    abre la conversación con un saludo ya escrito */
 const fab = document.createElement('a');
 fab.className = 'wa-fab';
-fab.href = buildWaLink('¡Hola! Vengo del sitio web de Lirios Floristería y quiero más información.');
+fab.href = buildWaLink('¡Hola! Vengo del sitio web de LIRIOS Floristería y quiero más información.');
 fab.target = '_blank';
 fab.rel = 'noopener';
 fab.setAttribute('aria-label', 'Chatear por WhatsApp');
@@ -62,4 +62,26 @@ if (!reduceMotion && 'IntersectionObserver' in window) {
   document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
 } else {
   document.querySelectorAll('.reveal').forEach((el) => el.classList.add('visible'));
+}
+
+/* Aviso de cookies: el sitio en sí solo usa localStorage (no cookies) para
+   el carrito, pero el mapa de Google incrustado en contacto.html sí puede
+   instalar sus propias cookies — por eso el aviso aplica. Se muestra una
+   sola vez por navegador (se recuerda en localStorage) y no bloquea nada,
+   solo informa: no hace falta un banner de consentimiento granular para
+   este nivel de uso de cookies. */
+const COOKIE_NOTICE_KEY = 'lirios-cookie-notice-dismissed';
+
+if (!localStorage.getItem(COOKIE_NOTICE_KEY)) {
+  const notice = document.createElement('div');
+  notice.className = 'cookie-notice';
+  notice.setAttribute('role', 'status');
+  notice.innerHTML =
+    '<p>Usamos almacenamiento local del navegador para tu carrito. El mapa de Google en la página de Contacto puede instalar sus propias cookies. <a href="politica-privacidad.html">Más información</a>.</p>' +
+    '<button type="button" class="cookie-notice-btn">Entendido</button>';
+  document.body.appendChild(notice);
+  notice.querySelector('.cookie-notice-btn').addEventListener('click', () => {
+    localStorage.setItem(COOKIE_NOTICE_KEY, '1');
+    notice.remove();
+  });
 }

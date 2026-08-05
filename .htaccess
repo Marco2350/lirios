@@ -1,0 +1,17 @@
+# Capa de protección a nivel de sitio (además de la sesión del panel
+# y de los .htaccess propios de /admin, /config y /database).
+
+# No listar el contenido de ninguna carpeta
+Options -Indexes
+
+# Bloquea el acceso directo a archivos ocultos (.env, .git*, .gitignore...)
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+# Cabeceras de seguridad básicas
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

@@ -2,8 +2,8 @@
    personalizar.js — constructor de ramo personalizado
    Múltiples flores con cantidades por color, papel, listón,
    extras y dedicatoria. Vista previa SVG dibujada en vivo.
-   Datos desde data/opciones-personalizacion.json (editable
-   desde /admin). Precio = tallos + papel + listón + extras.
+   Datos desde /api/opciones-personalizacion.php, que lee MySQL
+   en vivo (editable desde /admin). Precio = tallos + papel + listón + extras.
    ========================================================= */
 
 import { addToCart, formatPrice, escapeHtml, showToast } from './cart.js';
@@ -20,12 +20,26 @@ let state = {
 
 const MAX_STEMS = 24;
 
+/* Plantillas rápidas: combinaciones ya armadas para quien no quiere
+   elegir flor por flor. Se validan contra las opciones cargadas antes
+   de mostrarse, por si el negocio quitó alguna flor/color desde /admin. */
+const PRESETS = [
+  { id: 'clasico-rojo', nombre: 'Clásico Rojo', wrapId: 'kraft', ribbonId: 'dorado',
+    stems: [{ flowerId: 'rosas', colorId: 'rojo', qty: 6 }] },
+  { id: 'romance-pastel', nombre: 'Romance Pastel', wrapId: 'rosado', ribbonId: 'rosado',
+    stems: [{ flowerId: 'rosas', colorId: 'rosado', qty: 4 }, { flowerId: 'gerberas', colorId: 'blanco', qty: 3 }] },
+  { id: 'sol-girasoles', nombre: 'Sol de Girasoles', wrapId: 'kraft', ribbonId: 'verde',
+    stems: [{ flowerId: 'girasoles', colorId: 'amarillo', qty: 7 }] },
+  { id: 'elegancia-blanca', nombre: 'Elegancia Blanca', wrapId: 'blanco', ribbonId: 'blanco',
+    stems: [{ flowerId: 'lirios', colorId: 'blanco', qty: 3 }, { flowerId: 'rosas', colorId: 'blanco', qty: 4 }] },
+];
+
 /* Paletas para las opciones "mixto": color y tipo varían por tallo */
 const MIX_COLORS = ['#B3261E', '#E88BAD', '#E7C544', '#F5EFE6', '#B497D6'];
 const MIX_KINDS = ['rose', 'gerbera', 'lily', 'daisy', 'carnation'];
 
 async function loadOpciones() {
-  const res = await fetch('data/opciones-personalizacion.json');
+  const res = await fetch('api/opciones-personalizacion.php');
   if (!res.ok) throw new Error('No se pudieron cargar las opciones de personalización');
   return res.json();
 }
@@ -181,23 +195,30 @@ function renderFlores() {
     const variantKey = `${f.id}-${currentColorId}`;
     const qty = state.flowerVariants?.[variantKey]?.qty || 0;
 
+    const totalFlor = Object.values(state.flowerVariants)
+      .filter(v => v.flowerId === f.id)
+      .reduce((s, v) => s + (v.qty || 0), 0);
+
     return `
       <div class="flower-card" data-flower="${f.id}">
         <div class="flower-shape">
           ${flowerIconSVG(f.kind, currentColor.css, 68)}
         </div>
         <div class="flower-info">
-          <p class="flower-name">${escapeHtml(f.nombre)}</p>
+          <p class="flower-name">${escapeHtml(f.nombre)}${totalFlor > 0 ? ` <span class="flower-total-badge">${totalFlor}</span>` : ''}</p>
           <p class="flower-price">${formatPrice(f.precio)} / tallo</p>
 
           <div style="display:flex; gap:4px; margin:6px 0 4px; flex-wrap:wrap;">
-            ${opciones.colores.map(col => `
+            ${opciones.colores.map(col => {
+              const cnt = state.flowerVariants?.[`${f.id}-${col.id}`]?.qty || 0;
+              return `
               <button type="button"
                 class="color-swatch ${currentColorId === col.id ? 'active' : ''}"
-                aria-label="${escapeHtml(f.nombre)} en color ${escapeHtml(col.nombre)}"
+                aria-label="${escapeHtml(f.nombre)} en color ${escapeHtml(col.nombre)}${cnt ? `, ${cnt} agregados` : ''}"
                 style="background:${col.css};"
-                data-flower="${f.id}" data-color="${col.id}"></button>
-            `).join('')}
+                data-flower="${f.id}" data-color="${col.id}">${cnt > 0 ? `<span class="swatch-count">${cnt}</span>` : ''}</button>
+            `;
+            }).join('')}
           </div>
 
           <div style="display:flex; align-items:center; gap:4px;">
@@ -397,6 +418,13 @@ function updateLive() {
   document.getElementById('stems-count').textContent = stemsTexto;
   document.getElementById('custom-total').textContent = formatPrice(price);
 
+  const progressFill = document.getElementById('stems-progress-fill');
+  const progressLabel = document.getElementById('stems-progress-label');
+  if (progressFill && progressLabel) {
+    progressFill.style.width = Math.min(100, Math.round((stems / MAX_STEMS) * 100)) + '%';
+    progressLabel.textContent = `${stems} / ${MAX_STEMS} tallos`;
+  }
+
   /* Mini-barra móvil sincronizada */
   const miniFlores = document.getElementById('minibar-flores');
   const miniTotal = document.getElementById('minibar-total');
@@ -421,7 +449,7 @@ function updateLive() {
       const x = opciones.extras?.find(e => e.id === id);
       if (x) html += `<span class="selection-chip">+ ${escapeHtml(x.nombre)}</span>`;
     });
-    if (state.message) html += `<span style="font-size:10px;color:#7A6B58;margin-left:2px;">+ dedicatoria</span>`;
+    if (state.message) html += `<span style="font-size:10px;color:#6B7268;margin-left:2px;">+ dedicatoria</span>`;
     summaryEl.innerHTML = html;
   }
 
@@ -621,6 +649,59 @@ function updateRamoPreviewSVG() {
 }
 
 /* =========================================================
+   Plantillas rápidas y reinicio
+   ========================================================= */
+
+function renderPresets() {
+  const container = document.getElementById('presets-list');
+  if (!container || !opciones) return;
+
+  const disponibles = PRESETS.filter((p) =>
+    p.stems.every(
+      (s) => opciones.flores.some((f) => f.id === s.flowerId) && opciones.colores.some((c) => c.id === s.colorId)
+    )
+  );
+
+  container.innerHTML = disponibles
+    .map((p) => `<button type="button" class="preset-chip" data-preset="${p.id}">${escapeHtml(p.nombre)}</button>`)
+    .join('');
+
+  container.querySelectorAll('button[data-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => aplicarPreset(btn.dataset.preset));
+  });
+}
+
+function aplicarPreset(presetId) {
+  const preset = PRESETS.find((p) => p.id === presetId);
+  if (!preset || !opciones) return;
+
+  state.flowerVariants = {};
+  state.selectedColorForFlower = {};
+  preset.stems.forEach((s) => {
+    state.flowerVariants[`${s.flowerId}-${s.colorId}`] = { qty: s.qty, flowerId: s.flowerId, colorId: s.colorId };
+    state.selectedColorForFlower[s.flowerId] = s.colorId;
+  });
+  if (opciones.wraps?.some((w) => w.id === preset.wrapId)) state.wrapId = preset.wrapId;
+  if (opciones.ribbons?.some((r) => r.id === preset.ribbonId)) state.ribbonId = preset.ribbonId;
+
+  lastDrawnStems = -1;
+  renderAll();
+  showToast(`Plantilla "${preset.nombre}" aplicada — ajústala a tu gusto`);
+}
+
+function vaciarRamo() {
+  state.flowerVariants = {};
+  state.selectedColorForFlower = {};
+  state.extras = new Set();
+  state.message = '';
+  lastDrawnStems = -1;
+  const ta = document.getElementById('dedicatoria');
+  if (ta) ta.value = '';
+  renderAll();
+  showToast('Ramo vaciado');
+}
+
+/* =========================================================
    Detalle para el carrito / WhatsApp
    ========================================================= */
 
@@ -663,14 +744,17 @@ async function init() {
     opciones = await loadOpciones();
   } catch (err) {
     console.error(err);
-    form.innerHTML = '<p class="empty-msg">No se pudieron cargar las opciones. Usa XAMPP y verifica data/opciones-personalizacion.json.</p>';
+    form.innerHTML = '<p class="empty-msg">No se pudieron cargar las opciones. Verifica que MySQL esté corriendo en XAMPP.</p>';
     return;
   }
 
   state.wrapId = opciones.wraps?.[0]?.id || null;
   state.ribbonId = opciones.ribbons?.[0]?.id || null;
 
+  renderPresets();
   renderAll();
+
+  document.getElementById('vaciar-ramo')?.addEventListener('click', vaciarRamo);
 
   const addBtn = document.getElementById('add-to-cart-btn');
   if (addBtn) {

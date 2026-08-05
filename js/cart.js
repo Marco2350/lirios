@@ -6,6 +6,7 @@
    ========================================================= */
 
 import { buildOrderMessage, buildWaLink } from './whatsapp.js';
+import { generateOrderImage, downloadBlob } from './order-image.js';
 
 const STORAGE_KEY = 'lirios-cart';
 
@@ -61,6 +62,32 @@ export function cartCount() {
 
 export function cartTotal() {
   return getCart().reduce((sum, i) => sum + i.precio * i.cantidad, 0);
+}
+
+/**
+ * Registra el pedido en el servidor (para la reportería de ventas del
+ * panel admin) justo antes de abrir WhatsApp. Es "fire and forget": no
+ * se espera la respuesta ni se bloquea el envío por WhatsApp si falla
+ * (perder el registro de una venta es mucho menos grave que impedir
+ * que el pedido llegue al negocio).
+ */
+function registrarPedido(cart, cliente, nota) {
+  const items = cart.map((item) => ({
+    id: item.id,
+    tipo: item.tipo,
+    nombre: item.nombre,
+    precio: item.precio,
+    cantidad: item.cantidad,
+    detalle: item.detalle,
+  }));
+
+  fetch('api/pedidos.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cliente, nota, items }),
+  }).catch(() => {
+    /* Sin conexión o servidor caído: el pedido por WhatsApp sigue su curso */
+  });
 }
 
 /* ---------- Utilidades compartidas ---------- */
@@ -172,13 +199,75 @@ function initCartPage() {
   });
 
   const enviarBtn = document.getElementById('send-whatsapp');
-  enviarBtn?.addEventListener('click', () => {
+  const modal = document.getElementById('order-modal');
+  const modalPreview = document.getElementById('order-modal-preview');
+  const modalOpenWa = document.getElementById('order-modal-open-wa');
+  const modalClose = document.getElementById('order-modal-close');
+  let pendingWaLink = null;
+
+  function closeModal() {
+    modal.hidden = true;
+  }
+
+  modalClose?.addEventListener('click', closeModal);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal && !modal.hidden) closeModal();
+  });
+
+  modalOpenWa?.addEventListener('click', () => {
+    if (pendingWaLink) window.open(pendingWaLink, '_blank', 'noopener');
+    closeModal();
+  });
+
+  enviarBtn?.addEventListener('click', async () => {
     const cart = getCart();
     if (cart.length === 0) return;
     const nombre = document.getElementById('customer-name')?.value.trim() ?? '';
     const nota = document.getElementById('customer-note')?.value.trim() ?? '';
-    const mensaje = buildOrderMessage(cart, cartTotal(), nombre, nota);
-    window.open(buildWaLink(mensaje), '_blank', 'noopener');
+    const total = cartTotal();
+    const mensaje = buildOrderMessage(cart, total, nombre, nota);
+
+    registrarPedido(cart, nombre, nota);
+    pendingWaLink = buildWaLink(mensaje);
+
+    const originalText = enviarBtn.textContent;
+    enviarBtn.disabled = true;
+    enviarBtn.textContent = 'Generando imagen del pedido…';
+
+    try {
+      const { blob, dataUrl } = await generateOrderImage(cart, total, nombre);
+      const filename = `pedido-lirios-${Date.now()}.png`;
+      const file = new File([blob], filename, { type: 'image/png' });
+
+      /* En celular (la mayoría de clientes), el navegador puede compartir la
+         imagen directo al elegir WhatsApp desde su propio menú "Compartir":
+         un solo toque, sin pasar por la carpeta de Descargas. El cliente elige
+         el chat de LIRIOS él mismo (esta API no permite abrir un chat
+         específico), así que el texto del pedido va incluido en el share. */
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], text: mensaje });
+          return;
+        } catch (shareErr) {
+          if (shareErr?.name === 'AbortError') return; // el cliente canceló el compartir
+          /* si el share falla por otra razón, seguimos con la descarga + modal de respaldo */
+        }
+      }
+
+      downloadBlob(blob, filename);
+      modalPreview.src = dataUrl;
+      modal.hidden = false;
+    } catch {
+      /* Si falla el canvas (ej. imagen bloqueada), no se pierde el pedido:
+         se abre WhatsApp igual con el texto, solo sin la imagen adjunta. */
+      window.open(pendingWaLink, '_blank', 'noopener');
+    } finally {
+      enviarBtn.disabled = false;
+      enviarBtn.textContent = originalText;
+    }
   });
 }
 

@@ -1,0 +1,2 @@
+# /database contiene el esquema SQL: nunca debe servirse por HTTP
+Require all denied

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /config/
+Disallow: /database/
+
+# Reemplazar por el dominio real una vez publicado el sitio (ver CLAUDE.md, sección 9)
+Sitemap: https://www.liriosfloristeria.com/sitemap.php

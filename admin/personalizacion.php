@@ -1,9 +1,9 @@
 <?php
 /**
- * Editor de las opciones del personalizador de ramos
- * (data/opciones-personalizacion.json): tipos de flor (con su
- * forma en el dibujo), colores, papeles de envoltura, listones
- * y extras — cada uno con su precio.
+ * Editor de las opciones del personalizador de ramos, sobre las
+ * tablas MySQL pers_flores / pers_colores / pers_wraps / pers_ribbons
+ * / pers_extras: tipos de flor (con su forma en el dibujo), colores,
+ * papeles de envoltura, listones y extras — cada uno con su precio.
  *
  * Precio del ramo = (precio por tallo × cantidad de cada flor)
  *                 + papel + listón + extras marcados.
@@ -37,47 +37,48 @@ $formasFlor = [
  *   ['color', 'Etiqueta']            → selector de color
  *   ['texto', 'Etiqueta']            → texto corto
  *   ['select', 'Etiqueta', opciones] → lista desplegable
+ * 'columna' es el nombre real de la columna en la tabla.
  */
 $secciones = [
     'flores' => [
+        'tabla' => 'pers_flores',
         'titulo' => 'Tipos de flor',
         'campoPrecio' => 'precio',
         'etiquetaPrecio' => 'Precio por tallo (L.)',
         'extraCampos' => ['kind' => ['select', 'Forma en el dibujo', $formasFlor]],
     ],
     'colores' => [
+        'tabla' => 'pers_colores',
         'titulo' => 'Colores de flor',
         'campoPrecio' => null,
         'etiquetaPrecio' => null,
         'extraCampos' => ['css' => ['color', 'Color (visual)']],
     ],
     'wraps' => [
+        'tabla' => 'pers_wraps',
         'titulo' => 'Papeles de envoltura',
         'campoPrecio' => 'precio',
         'etiquetaPrecio' => 'Precio (L.)',
         'extraCampos' => [
             'color' => ['color', 'Color del papel'],
-            'description' => ['texto', 'Descripción corta'],
+            'descripcion' => ['texto', 'Descripción corta'],
         ],
     ],
     'ribbons' => [
+        'tabla' => 'pers_ribbons',
         'titulo' => 'Listones',
         'campoPrecio' => 'precio',
         'etiquetaPrecio' => 'Precio (L.)',
         'extraCampos' => ['color' => ['color', 'Color del listón']],
     ],
     'extras' => [
+        'tabla' => 'pers_extras',
         'titulo' => 'Extras',
         'campoPrecio' => 'precio',
         'etiquetaPrecio' => 'Precio (L.)',
         'extraCampos' => [],
     ],
 ];
-
-$opciones = leer_json(OPCIONES_JSON);
-foreach (array_keys($secciones) as $s) {
-    $opciones[$s] = $opciones[$s] ?? [];
-}
 
 /* ---------- Acciones POST ---------- */
 
@@ -92,58 +93,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $conf = $secciones[$seccion];
+    $tabla = $conf['tabla'];
 
     if ($accion === 'guardar') {
-        $id = limpiar_texto($_POST['id'] ?? '', 60); // vacío = item nuevo
-        $nombre = limpiar_texto($_POST['nombre'] ?? '', 60);
+        $id = (int) ($_POST['id'] ?? 0);
+        $nombre = limpiar_texto($_POST['nombre'] ?? '', 100);
 
         if ($nombre === '') {
             flash('error', 'El nombre es obligatorio.');
         } else {
-            $item = ['id' => $id, 'nombre' => $nombre];
+            $campos = ['nombre' => $nombre];
 
             if ($conf['campoPrecio']) {
-                $item[$conf['campoPrecio']] = limpiar_precio($_POST['valor'] ?? 0);
+                $campos[$conf['campoPrecio']] = limpiar_precio($_POST['valor'] ?? 0);
             }
             foreach ($conf['extraCampos'] as $campo => $def) {
                 [$tipo] = $def;
-                $valor = limpiar_texto($_POST[$campo] ?? '', 120);
+                $valor = limpiar_texto($_POST[$campo] ?? '', 150);
                 if ($tipo === 'color') {
-                    // Acepta hex del selector; los degradados existentes (mixto) se conservan
-                    $item[$campo] = preg_match('/^#[0-9a-fA-F]{3,8}$/', $valor) || str_starts_with($valor, 'linear-gradient')
+                    $campos[$campo] = preg_match('/^#[0-9a-fA-F]{3,8}$/', $valor) || str_starts_with($valor, 'linear-gradient')
                         ? $valor
                         : '#CCCCCC';
                 } elseif ($tipo === 'select') {
                     $permitidos = array_keys($def[2]);
-                    $item[$campo] = in_array($valor, $permitidos, true) ? $valor : $permitidos[0];
+                    $campos[$campo] = in_array($valor, $permitidos, true) ? $valor : $permitidos[0];
                 } else {
-                    $item[$campo] = $valor;
+                    $campos[$campo] = $valor;
                 }
             }
 
-            $indice = null;
-            if ($id !== '') {
-                foreach ($opciones[$seccion] as $i => $it) {
-                    if ($it['id'] === $id) {
-                        $indice = $i;
-                        break;
-                    }
-                }
-            }
-
-            if ($indice !== null) {
-                $opciones[$seccion][$indice] = $item;
-                $msj = 'Cambios guardados.';
+            if ($id > 0) {
+                $set = implode(', ', array_map(fn($c) => "$c = :$c", array_keys($campos)));
+                db()->prepare("UPDATE {$tabla} SET {$set} WHERE id = :id")
+                    ->execute($campos + ['id' => $id]);
+                flash('ok', 'Cambios guardados.');
             } else {
-                $item['id'] = id_unico(slugify($nombre), $opciones[$seccion]);
-                $opciones[$seccion][] = $item;
-                $msj = 'Opción agregada.';
-            }
-
-            if (guardar_json(OPCIONES_JSON, $opciones)) {
-                flash('ok', $msj);
-            } else {
-                flash('error', 'No se pudo escribir el archivo de opciones. Revisa permisos.');
+                $campos['slug'] = slug_unico($tabla, slugify($nombre));
+                $campos['orden'] = (int) db()->query("SELECT COALESCE(MAX(orden),0)+1 FROM {$tabla}")->fetchColumn();
+                $columnas = implode(', ', array_keys($campos));
+                $marcadores = implode(', ', array_map(fn($c) => ":$c", array_keys($campos)));
+                db()->prepare("INSERT INTO {$tabla} ({$columnas}) VALUES ({$marcadores})")->execute($campos);
+                flash('ok', 'Opción agregada.');
             }
         }
         header('Location: personalizacion.php');
@@ -151,18 +141,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($accion === 'eliminar') {
-        $id = limpiar_texto($_POST['id'] ?? '', 60);
-        if (count($opciones[$seccion]) <= 1) {
+        $id = (int) ($_POST['id'] ?? 0);
+        $total = (int) db()->query("SELECT COUNT(*) FROM {$tabla}")->fetchColumn();
+        if ($total <= 1) {
             flash('error', 'Debe quedar al menos una opción en cada sección para que el personalizador funcione.');
         } else {
-            $opciones[$seccion] = array_values(array_filter($opciones[$seccion], fn($it) => $it['id'] !== $id));
-            guardar_json(OPCIONES_JSON, $opciones);
+            db()->prepare("DELETE FROM {$tabla} WHERE id = ?")->execute([$id]);
             flash('ok', 'Opción eliminada.');
         }
         header('Location: personalizacion.php');
         exit;
     }
 }
+
+/* ---------- Datos de cada sección ---------- */
+
+foreach ($secciones as $clave => &$conf) {
+    $conf['items'] = db()->query("SELECT * FROM {$conf['tabla']} ORDER BY orden, nombre")->fetchAll();
+}
+unset($conf);
 
 admin_header('Opciones de personalización', 'personalizacion.php');
 
@@ -191,7 +188,7 @@ function celda_campo(string $fid, string $campo, array $def, ?array $item): void
         echo '</select>';
     } else {
         $ph = $item === null ? ' placeholder="' . e($etiqueta) . '"' : '';
-        echo '<input type="text" name="' . e($campo) . '" maxlength="120" form="' . e($fid) . '" value="' . e($valor) . '"' . $ph . '>';
+        echo '<input type="text" name="' . e($campo) . '" maxlength="150" form="' . e($fid) . '" value="' . e($valor) . '"' . $ph . '>';
     }
 }
 ?>
@@ -212,13 +209,13 @@ function celda_campo(string $fid, string $campo, array $def, ?array $item): void
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($opciones[$clave] as $item): ?>
+        <?php foreach ($conf['items'] as $item): ?>
         <?php
           $fid = 'f-' . $clave . '-' . $item['id'];        // form de guardar
           $fdel = 'del-' . $clave . '-' . $item['id'];     // form de eliminar
         ?>
         <tr>
-          <td><input type="text" name="nombre" required maxlength="60" form="<?= e($fid) ?>" value="<?= e($item['nombre']) ?>"></td>
+          <td><input type="text" name="nombre" required maxlength="100" form="<?= e($fid) ?>" value="<?= e($item['nombre']) ?>"></td>
           <?php if ($conf['campoPrecio']): ?>
             <td style="max-width:140px"><input type="number" name="valor" min="0" step="0.01" form="<?= e($fid) ?>" value="<?= e((string)($item[$conf['campoPrecio']] ?? 0)) ?>"></td>
           <?php endif; ?>
@@ -237,7 +234,7 @@ function celda_campo(string $fid, string $campo, array $def, ?array $item): void
         <!-- Fila para agregar nueva opción -->
         <?php $fnew = 'new-' . $clave; ?>
         <tr>
-          <td><input type="text" name="nombre" required maxlength="60" form="<?= e($fnew) ?>" placeholder="Nueva opción…"></td>
+          <td><input type="text" name="nombre" required maxlength="100" form="<?= e($fnew) ?>" placeholder="Nueva opción…"></td>
           <?php if ($conf['campoPrecio']): ?>
             <td style="max-width:140px"><input type="number" name="valor" min="0" step="0.01" form="<?= e($fnew) ?>" placeholder="0.00"></td>
           <?php endif; ?>
@@ -251,25 +248,25 @@ function celda_campo(string $fid, string $campo, array $def, ?array $item): void
   </div>
 
   <!-- Formularios de esta sección (fuera de la tabla, asociados por form="id") -->
-  <?php foreach ($opciones[$clave] as $item): ?>
+  <?php foreach ($conf['items'] as $item): ?>
     <form id="f-<?= e($clave . '-' . $item['id']) ?>" method="post" action="personalizacion.php">
       <?= csrf_field() ?>
       <input type="hidden" name="accion" value="guardar">
       <input type="hidden" name="seccion" value="<?= e($clave) ?>">
-      <input type="hidden" name="id" value="<?= e($item['id']) ?>">
+      <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
     </form>
     <form id="del-<?= e($clave . '-' . $item['id']) ?>" method="post" action="personalizacion.php" onsubmit="return confirm('¿Eliminar «<?= e($item['nombre']) ?>»?');">
       <?= csrf_field() ?>
       <input type="hidden" name="accion" value="eliminar">
       <input type="hidden" name="seccion" value="<?= e($clave) ?>">
-      <input type="hidden" name="id" value="<?= e($item['id']) ?>">
+      <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
     </form>
   <?php endforeach; ?>
   <form id="new-<?= e($clave) ?>" method="post" action="personalizacion.php">
     <?= csrf_field() ?>
     <input type="hidden" name="accion" value="guardar">
     <input type="hidden" name="seccion" value="<?= e($clave) ?>">
-    <input type="hidden" name="id" value="">
+    <input type="hidden" name="id" value="0">
   </form>
 </div>
 <?php endforeach; ?>
