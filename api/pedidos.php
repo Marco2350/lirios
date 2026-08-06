@@ -13,7 +13,8 @@
  *   "cliente": "María López",           // opcional
  *   "nota": "Entregar el viernes",       // opcional
  *   "items": [
- *     { "id": "ramo-dulce-amor"|null, "tipo": "producto"|"personalizado",
+ *     { "id": "ramo-dulce-amor"|null, "codigo": "RM-4K2P9"|null,
+ *       "tipo": "producto"|"personalizado",
  *       "nombre": "...", "precio": 950, "cantidad": 1, "detalle": "..."|null }
  *   ]
  * }
@@ -92,12 +93,15 @@ foreach ($items as $item) {
     $precio = round(max(0, min(100000, (float) ($item['precio'] ?? 0))), 2);
     $cantidad = max(1, min(99, (int) ($item['cantidad'] ?? 1)));
     $slug = is_string($item['id'] ?? null) ? trim($item['id']) : null;
+    $codigoCrudo = is_string($item['codigo'] ?? null) ? trim($item['codigo']) : null;
+    $codigo = ($codigoCrudo && preg_match('/^[A-Z0-9-]{1,20}$/', $codigoCrudo)) ? $codigoCrudo : null;
 
     if ($nombre === null || $precio <= 0) continue;
 
     $itemsValidados[] = [
         'tipo' => $tipo,
         'slug' => $slug,
+        'codigo' => $codigo,
         'nombre' => $nombre,
         'detalle' => $detalle,
         'precio' => $precio,
@@ -140,8 +144,8 @@ try {
 
     $buscarProducto = db()->prepare('SELECT id FROM productos WHERE slug = ? LIMIT 1');
     $insertarItem = db()->prepare(
-        'INSERT INTO pedido_items (pedido_id, tipo, producto_id, nombre, detalle, precio_unitario, cantidad, subtotal)
-         VALUES (:pedido_id, :tipo, :producto_id, :nombre, :detalle, :precio, :cantidad, :subtotal)'
+        'INSERT INTO pedido_items (pedido_id, tipo, producto_id, codigo, nombre, detalle, precio_unitario, cantidad, subtotal)
+         VALUES (:pedido_id, :tipo, :producto_id, :codigo, :nombre, :detalle, :precio, :cantidad, :subtotal)'
     );
 
     foreach ($itemsValidados as $item) {
@@ -156,6 +160,7 @@ try {
             'pedido_id' => $pedidoId,
             'tipo' => $item['tipo'],
             'producto_id' => $productoId,
+            'codigo' => $item['codigo'],
             'nombre' => $item['nombre'],
             'detalle' => $item['detalle'],
             'precio' => $item['precio'],

@@ -12,6 +12,7 @@ function admin_icono(string $nombre): string
     $trazos = [
         'inicio' => '<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v8a1 1 0 0 0 1 1h3v-5h4v5h3a1 1 0 0 0 1-1v-8"/>',
         'pedidos' => '<path d="M6 3h12v17l-2.5-1.5L13 20l-2.5-1.5L8 20l-2-1.5V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+        'codigos' => '<path d="M9 3 7 21M17 3l-2 18M4 8h16M3 16h16"/>',
         'reportes' => '<path d="M3 20h18"/><path d="M5 20V10M12 20V4M19 20v-7"/>',
         'productos' => '<path d="M11 3h6a2 2 0 0 1 2 2v6l-9.5 9.5a1.5 1.5 0 0 1-2 0L3 16a1.5 1.5 0 0 1 0-2Z"/><circle cx="15.5" cy="7.5" r="1.25"/>',
         'categorias' => '<rect x="3.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3"/>',
@@ -33,6 +34,7 @@ function admin_header(string $titulo, string $activo = ''): void
     $items = [
         'dashboard.php' => ['inicio', 'Inicio'],
         'pedidos.php' => ['pedidos', 'Pedidos'],
+        'codigos.php' => ['codigos', 'Códigos de ramo'],
         'reportes.php' => ['reportes', 'Reportes'],
         'productos.php' => ['productos', 'Productos'],
         'categorias.php' => ['categorias', 'Categorías'],
@@ -51,7 +53,7 @@ function admin_header(string $titulo, string $activo = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800&family=Arimo:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css?v=7">
+  <link rel="stylesheet" href="../css/admin.css?v=9">
 </head>
 <body class="admin-shell">
 

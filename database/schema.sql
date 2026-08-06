@@ -135,6 +135,7 @@ CREATE TABLE pedido_items (
   pedido_id        INT NOT NULL,
   tipo             ENUM('producto','personalizado') NOT NULL,
   producto_id      INT DEFAULT NULL,
+  codigo           VARCHAR(20) DEFAULT NULL,
   nombre           VARCHAR(200) NOT NULL,
   detalle          VARCHAR(500) DEFAULT NULL,
   precio_unitario  DECIMAL(10,2) NOT NULL,
@@ -146,6 +147,7 @@ CREATE TABLE pedido_items (
 
 CREATE INDEX idx_pedidos_creado_en ON pedidos(creado_en);
 CREATE INDEX idx_pedidos_ip_creado ON pedidos(ip, creado_en);
+CREATE INDEX idx_pedido_items_codigo ON pedido_items(codigo);
 
 -- =========================================================
 -- Datos semilla — taxonomía (12 categorías del negocio)

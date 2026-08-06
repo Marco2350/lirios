@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800;1,700&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/styles.css?v=10">
 </head>
 <body>
 
@@ -93,19 +93,6 @@
 
     </section>
 
-    <!-- Modal de confirmación: imagen-resumen del pedido antes de abrir WhatsApp -->
-    <div class="order-modal-backdrop" id="order-modal" hidden>
-      <div class="order-modal" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
-        <button type="button" class="order-modal-close" id="order-modal-close" aria-label="Cerrar">&times;</button>
-        <h2 id="order-modal-title">Tu imagen-resumen está lista</h2>
-        <p>Se descargó una imagen con la foto, cantidad y precio de cada producto de tu pedido. WhatsApp no permite adjuntarla sola, así que ábrela desde tu carpeta de <strong>Descargas</strong> y adjúntala en el chat que se va a abrir.</p>
-        <img class="order-modal-preview" id="order-modal-preview" alt="Vista previa de la imagen-resumen del pedido">
-        <div class="order-modal-actions">
-          <button type="button" class="btn btn-whatsapp btn-block" id="order-modal-open-wa">Abrir WhatsApp</button>
-        </div>
-      </div>
-    </div>
-
   </main>
 
   <footer class="site-footer">
@@ -167,6 +154,5 @@
     }
   </script>
   <script type="module" src="js/main.js?v=3"></script>
-  <script type="module" src="js/cart.js?v=4"></script>
 </body>
 </html>

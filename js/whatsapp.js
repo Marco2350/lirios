@@ -12,7 +12,8 @@ export function buildOrderMessage(cart, total, nombre = '', nota = '') {
   const lineas = cart.map((item) => {
     const detalle = item.detalle ? ` (${item.detalle})` : '';
     const cu = item.cantidad > 1 ? ' c/u' : '';
-    return `${item.cantidad}x ${item.nombre}${detalle} - ${formatPrice(item.precio)}${cu}`;
+    const codigo = item.codigo ? ` [Código: ${item.codigo}]` : '';
+    return `${item.cantidad}x ${item.nombre}${detalle} - ${formatPrice(item.precio)}${cu}${codigo}`;
   });
 
   return [
@@ -24,8 +25,6 @@ export function buildOrderMessage(cart, total, nombre = '', nota = '') {
     '',
     `Nombre: ${nombre || '_____'}`,
     `Nota: ${nota || '_____'}`,
-    '',
-    '📎 Les adjunto también la imagen-resumen del pedido con la foto de cada producto.',
   ].join('\n');
 }
 

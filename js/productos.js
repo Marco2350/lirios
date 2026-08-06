@@ -95,8 +95,8 @@ function wireAddButtons(contenedor, productos) {
     btn.style.transition = 'all .15s ease';
     btn.textContent = '✓ Agregado';
     btn.disabled = true;
-    btn.style.backgroundColor = '#23261F';
-    btn.style.borderColor = '#23261F';
+    btn.style.backgroundColor = '#241F17';
+    btn.style.borderColor = '#241F17';
     btn.style.color = '#FFFFFF';
 
     showToast(`${producto.nombre} agregado al carrito`);

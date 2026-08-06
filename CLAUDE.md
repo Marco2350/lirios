@@ -40,23 +40,27 @@ No se requiere backend de pagos ni checkout tradicional. El "checkout" real es u
 
 ## 3. Paleta de colores
 
-**Rediseño 2026-08-02 (tres iteraciones el mismo día).** La clienta pidió primero quitar el tono amarillento del sitio y llevarlo a blanco con combinaciones más limpias y elegantes → se probó **blanco + verde salvia/botánico**. Horas después pidió un dorado "elegante y minimalista" (no el mostaza plano original) → se probó **blanco + dorado antiguo/champán**. Poco después pidió volver al verde → paleta final (por ahora): **blanco + verde salvia/botánico**, la misma de la primera iteración. Los **nombres de las variables CSS no cambiaron** en ninguna iteración (`--mostaza`, `--mostaza-dark`, `--mostaza-light`, `--crema`, `--crema-suave`, `--carbon`, `--gris-calido`, todas en `:root` de `css/styles.css` y `css/admin.css`) — solo sus valores hex — para no tener que tocar las cientos de referencias `var(--mostaza)` etc. repartidas por todo el sitio y el panel admin. Si se vuelve a tocar esta paleta, es más simple seguir reasignando estos mismos nombres que renombrarlos (y conviene buscar/reemplazar por valor hex exacto, no solo por nombre de variable — hay bastantes hex hardcodeados fuera de `:root`, sobre todo en el SVG del personalizador). El dorado elegante probado en la segunda iteración era `#B8933E` / `#8F6F2C` / `#D9C08A` con fondo `#FAF6EC` y texto `#241F17` — vale la pena tenerlo a mano por si se retoma más adelante.
+**Rediseño 2026-08-05 (iteración 4): dorado con textura.** Tras tres iteraciones el 2026-08-02 (blanco+verde salvia → dorado elegante → de vuelta a verde salvia, ver historial abajo), la clienta pidió pasar definitivamente a **dorado antiguo con textura tipo foil metálico** en vez de un relleno plano, reemplazando el verde. Se retomaron exactamente los valores del dorado ya validado el 2026-08-02 (`#B8933E` / `#8F6F2C` / `#D9C08A` sobre fondo cálido `#FAF6EC` y texto `#241F17`) en vez de inventar un dorado nuevo. La "textura" se resuelve 100% con CSS (sin imágenes ni CDNs): dos variables nuevas en `:root` de ambos CSS —`--gold-shine` (degradado multi-stop que simula el brillo/sheen de una lámina metálica) y `--gold-brushed` (veta fina con `repeating-linear-gradient`)— se combinan como múltiples `background-image` sobre el botón primario (`.btn` en `css/styles.css`) y el acorde decorativo del hero (`.hero-carousel::before`), con una transición de `background-position` en el hover del botón para un barrido de brillo sutil. El resto de superficies doradas (badges, píldoras de estado en el panel admin) se quedaron con relleno plano a propósito — la textura se reserva para las superficies de marca más visibles, no para cada elemento pequeño.
+
+**Historial de iteraciones del 2026-08-02 (mismo día).** La clienta pidió primero quitar el tono amarillento del sitio y llevarlo a blanco con combinaciones más limpias y elegantes → se probó **blanco + verde salvia/botánico**. Horas después pidió un dorado "elegante y minimalista" (no el mostaza plano original) → se probó **blanco + dorado antiguo/champán**. Poco después pidió volver al verde → quedó en **blanco + verde salvia/botánico** hasta el rediseño del 2026-08-05 de arriba, que retomó ese mismo dorado.
+
+Los **nombres de las variables CSS no cambiaron** en ninguna iteración (`--mostaza`, `--mostaza-dark`, `--mostaza-light`, `--crema`, `--crema-suave`, `--carbon`, `--gris-calido`, todas en `:root` de `css/styles.css` y `css/admin.css`) — solo sus valores hex — para no tener que tocar las cientos de referencias `var(--mostaza)` etc. repartidas por todo el sitio y el panel admin. Si se vuelve a tocar esta paleta, es más simple seguir reasignando estos mismos nombres que renombrarlos (y conviene buscar/reemplazar por valor hex exacto, no solo por nombre de variable — hay bastantes hex hardcodeados fuera de `:root`, sobre todo en el SVG del personalizador y en las tarjetas de flores/wraps/ribbons del personalizador, que también se migraron al dorado el 2026-08-05).
 
 | Uso | Nombre (variable) | Hex |
 |---|---|---|
-| Primario (marca) | `mostaza` | `#4F6144` (verde salvia/botánico) |
-| Primario hover/dark | `mostaza-dark` | `#37452F` |
-| Primario claro (fondos suaves, badges) | `mostaza-light` | `#C7D3BB` |
-| Fondo general | `crema` | `#FFFFFF` |
-| Fondo secundario / cards | `crema-suave` | `#F5F6F2` |
-| Texto principal | `carbon` | `#23261F` |
-| Texto secundario / gris cálido | `gris-calido` | `#6B7268` |
+| Primario (marca) | `mostaza` | `#B8933E` (dorado antiguo) |
+| Primario hover/dark | `mostaza-dark` | `#8F6F2C` |
+| Primario claro (fondos suaves, badges) | `mostaza-light` | `#D9C08A` |
+| Fondo general | `crema` | `#FAF6EC` |
+| Fondo secundario / cards | `crema-suave` | `#F1E9D6` |
+| Texto principal | `carbon` | `#241F17` |
+| Texto secundario / gris cálido | `gris-calido` | `#726A57` |
 | Blanco | `blanco` | `#FFFFFF` |
 | Éxito (agregado al carrito, WhatsApp) | `whatsapp-green` | `#25D366` (definida pero no usada en UI, ver nota abajo) |
 
 **Nota — sin verde de WhatsApp en la UI:** aunque `--whatsapp-green` sigue en `:root`, la clienta pidió no usarlo visualmente (desentonaba con la paleta). Los CTAs de WhatsApp (`.btn-whatsapp`, `.wa-fab`) van en `--carbon` con hover `--mostaza-dark` — el tono exacto de ese hover cambia cada vez que se retoca la paleta, pero la regla en sí (nunca `--whatsapp-green`) sigue vigente.
 
-**Qué NO se tocó en ningún rediseño de paleta:** los colores hardcodeados que representan flores/papeles reales (ej. el amarillo del girasol en la ilustración SVG del personalizador, el listón "Dorado" en `pers_ribbons`) son contenido del catálogo, no color de marca — se dejaron intactos a propósito.
+**Qué NO se tocó en ningún rediseño de paleta:** los colores hardcodeados que representan flores/papeles reales (ej. el amarillo del girasol en la ilustración SVG del personalizador, el listón "Dorado" en `pers_ribbons`) son contenido del catálogo, no color de marca — se dejaron intactos a propósito. Tampoco se tocaron los colores semánticos de éxito/error (`--exito-bg`/`--exito-texto` en verde, `--error`/`--error-bg` en rojo, en ambos CSS) ni los acentos de variedad de las tarjetas KPI del dashboard admin (`.kpi-icono.azul`, `.kpi-icono.terracota`) — significan "aprobado"/"rechazado"/variedad visual, no son el color de marca, así que no cambian con el verde→dorado.
 
 **Logo del footer (2026-08-02):** el footer tiene fondo oscuro (`--carbon`); usa `images/Logo_Negativo.png` (versión clara del logo, ya existía en `/images` junto a `Logo_Positivo.png` sin usar) directo sobre el fondo, sin caja blanca de contraste. El logo del header (fondo claro) sigue usando `images/logo.png` normal.
 
@@ -168,7 +172,7 @@ Decisión del cliente: **sin frameworks JS, sin build step, hosting compartido t
 - Botón principal en `/carrito`: **"Enviar pedido por WhatsApp"**.
 - Al hacer clic, además de abrir WhatsApp, se envía (fire-and-forget, sin bloquear ni esperar respuesta) un `POST` a `/api/pedidos.php` que registra el pedido en las tablas `pedidos`/`pedido_items` — esto es lo que alimenta la reportería de ventas del panel admin (sección 6.6). Si ese registro falla (sin conexión, servidor caído), el pedido por WhatsApp se envía igual: nunca se bloquea la venta por un problema de tracking.
 - Genera un mensaje de texto con:
-  - Listado de productos (nombre, cantidad, personalización si aplica, precio unitario)
+  - Listado de productos (nombre, cantidad, personalización si aplica, precio unitario, **código de ramo**)
   - Total general
   - Nombre del cliente y nota (campo opcional antes de enviar)
 - Abre `https://wa.me/<numero-floristeria>?text=<mensaje-url-encoded>`.
@@ -176,15 +180,16 @@ Decisión del cliente: **sin frameworks JS, sin build step, hosting compartido t
   ```
   ¡Hola! Quiero hacer este pedido en LIRIOS Floristería:
 
-  1x Ramo personalizado (Rosas rojas, mediano, + chocolates) - L. 650.00
-  2x Girasoles clásicos - L. 300.00 c/u
+  1x Ramo personalizado (Rosas rojas, mediano, + chocolates) - L. 650.00 [Código: RM-4K2P9]
+  2x Girasoles clásicos - L. 300.00 c/u [Código: RM-9X0A1]
 
   Total: L. 1,250.00
 
   Nombre: _____
   Nota: _____
   ```
-- **Imagen-resumen del pedido (2026-08-02):** WhatsApp no permite adjuntar archivos vía el link `wa.me` (solo texto), así que `js/order-image.js` dibuja en `<canvas>` un "ticket" con foto+nombre+cantidad+precio de cada ítem. Si el navegador soporta `navigator.canShare({files})` (móvil y algunos navegadores de escritorio), se usa `navigator.share({files, text})` para compartir la imagen y el texto juntos directo a WhatsApp desde el selector nativo del sistema, en un solo toque — el cliente elige el chat de LIRIOS él mismo. Si no hay soporte, cae a un flujo de respaldo: se descarga el PNG y aparece un modal (`#order-modal` en `carrito.html`) con la vista previa y un botón "Abrir WhatsApp", pidiendo adjuntar la imagen a mano.
+- **Código de ramo por ítem (2026-08-05):** cada item del carrito lleva un código corto (ej. `RM-4K2P9`), calculado en el navegador con un hash determinista de la `key` del item (`codigoRamo()` en `js/cart.js`) — el mismo producto+talla, o la misma combinación exacta de un ramo personalizado, siempre produce el mismo código. Se genera 100% en el cliente (nunca se espera al servidor) para no romper el principio de "el WhatsApp nunca se bloquea por el registro del pedido" de arriba: el código va en el mensaje de WhatsApp y, en paralelo, se manda también a `/api/pedidos.php`, que lo guarda en `pedido_items.codigo` (columna `VARCHAR(20)`, saneada con whitelist `[A-Z0-9-]`). `/admin/codigos.php` es el reporte para buscar un código y ver a qué ramo corresponde, con la lista de pedidos donde apareció — así Claudia puede identificar el ramo exacto a partir de lo que el cliente copió y pegó de WhatsApp.
+- **Ya NO se envía imagen-resumen del pedido (2026-08-05):** hasta el 2026-08-02 existía `js/order-image.js`, que dibujaba en `<canvas>` un "ticket" con foto de cada producto y lo compartía junto al texto (o lo descargaba con un modal de respaldo). Se eliminó por pedido de la clienta a favor del código de ramo de arriba, que resuelve el mismo problema (identificar qué pidió el cliente) sin depender de que el cliente adjunte una imagen a mano. El flujo de "Enviar pedido por WhatsApp" ahora es directo: registra el pedido (fire-and-forget) y abre `wa.me` de inmediato, sin pasos intermedios.
 
 ### 6.5 Contacto / Ubicación
 - Dirección completa, teléfono clickeable (`tel:`), horario en tabla, mapa embebido de Google Maps, íconos con enlace a Instagram y Facebook.
@@ -263,6 +268,7 @@ Estructura plana, lista para subir tal cual a cPanel (todo dentro de `public_htm
   cambiar-password.php       (reescribe ADMIN_PASSWORD_HASH en includes/config.php)
   dashboard.php                (menú principal del panel)
   pedidos.php                    (lista de pedidos individuales + estado)
+  codigos.php                      (reporte: código de ramo → a qué ramo corresponde, ver sección 6.4)
   reportes.php                     (ventas diarias/semanales/mensuales, ver sección 6.6)
   productos.php                       (CRUD de productos y sus tallas/precios)
   categorias.php                         (CRUD de categorías y subcategorías)

@@ -6,7 +6,6 @@
    ========================================================= */
 
 import { buildOrderMessage, buildWaLink } from './whatsapp.js';
-import { generateOrderImage, downloadBlob } from './order-image.js';
 
 const STORAGE_KEY = 'lirios-cart';
 
@@ -17,6 +16,22 @@ export function formatPrice(monto) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+/**
+ * Código corto de ramo (ej. "RM-4K2P9"), determinista a partir de la
+ * `key` del item (mismo producto+talla o misma combinación de personalizado
+ * siempre da el mismo código). Sirve para que el cliente lo mencione por
+ * WhatsApp y el negocio identifique el ramo exacto desde el reporte de
+ * códigos en /admin/codigos.php, sin depender del id autoincremental de
+ * la base de datos (que todavía no existe cuando se arma el mensaje).
+ */
+function codigoRamo(key) {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (Math.imul(hash, 31) + key.charCodeAt(i)) >>> 0;
+  }
+  return 'RM-' + hash.toString(36).toUpperCase().padStart(5, '0').slice(-5);
 }
 
 export function getCart() {
@@ -35,6 +50,7 @@ function saveCart(cart) {
 
 export function addToCart(item) {
   const cart = getCart();
+  if (!item.codigo) item.codigo = codigoRamo(item.key);
   const existente = cart.find((i) => i.key === item.key);
   if (existente) {
     existente.cantidad += item.cantidad;
@@ -74,6 +90,7 @@ export function cartTotal() {
 function registrarPedido(cart, cliente, nota) {
   const items = cart.map((item) => ({
     id: item.id,
+    codigo: item.codigo,
     tipo: item.tipo,
     nombre: item.nombre,
     precio: item.precio,
@@ -156,7 +173,7 @@ function renderCartPage() {
         <div>
           <h3>${escapeHtml(item.nombre)}</h3>
           ${detalle}
-          <p class="item-unit">${formatPrice(item.precio)} c/u</p>
+          <p class="item-unit">${formatPrice(item.precio)} c/u · <span class="item-code">Código ${escapeHtml(item.codigo || '')}</span></p>
         </div>
         <div class="item-side">
           <span class="item-subtotal">${formatPrice(item.precio * item.cantidad)}</span>
@@ -199,30 +216,8 @@ function initCartPage() {
   });
 
   const enviarBtn = document.getElementById('send-whatsapp');
-  const modal = document.getElementById('order-modal');
-  const modalPreview = document.getElementById('order-modal-preview');
-  const modalOpenWa = document.getElementById('order-modal-open-wa');
-  const modalClose = document.getElementById('order-modal-close');
-  let pendingWaLink = null;
 
-  function closeModal() {
-    modal.hidden = true;
-  }
-
-  modalClose?.addEventListener('click', closeModal);
-  modal?.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal && !modal.hidden) closeModal();
-  });
-
-  modalOpenWa?.addEventListener('click', () => {
-    if (pendingWaLink) window.open(pendingWaLink, '_blank', 'noopener');
-    closeModal();
-  });
-
-  enviarBtn?.addEventListener('click', async () => {
+  enviarBtn?.addEventListener('click', () => {
     const cart = getCart();
     if (cart.length === 0) return;
     const nombre = document.getElementById('customer-name')?.value.trim() ?? '';
@@ -231,43 +226,7 @@ function initCartPage() {
     const mensaje = buildOrderMessage(cart, total, nombre, nota);
 
     registrarPedido(cart, nombre, nota);
-    pendingWaLink = buildWaLink(mensaje);
-
-    const originalText = enviarBtn.textContent;
-    enviarBtn.disabled = true;
-    enviarBtn.textContent = 'Generando imagen del pedido…';
-
-    try {
-      const { blob, dataUrl } = await generateOrderImage(cart, total, nombre);
-      const filename = `pedido-lirios-${Date.now()}.png`;
-      const file = new File([blob], filename, { type: 'image/png' });
-
-      /* En celular (la mayoría de clientes), el navegador puede compartir la
-         imagen directo al elegir WhatsApp desde su propio menú "Compartir":
-         un solo toque, sin pasar por la carpeta de Descargas. El cliente elige
-         el chat de LIRIOS él mismo (esta API no permite abrir un chat
-         específico), así que el texto del pedido va incluido en el share. */
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], text: mensaje });
-          return;
-        } catch (shareErr) {
-          if (shareErr?.name === 'AbortError') return; // el cliente canceló el compartir
-          /* si el share falla por otra razón, seguimos con la descarga + modal de respaldo */
-        }
-      }
-
-      downloadBlob(blob, filename);
-      modalPreview.src = dataUrl;
-      modal.hidden = false;
-    } catch {
-      /* Si falla el canvas (ej. imagen bloqueada), no se pierde el pedido:
-         se abre WhatsApp igual con el texto, solo sin la imagen adjunta. */
-      window.open(pendingWaLink, '_blank', 'noopener');
-    } finally {
-      enviarBtn.disabled = false;
-      enviarBtn.textContent = originalText;
-    }
+    window.open(buildWaLink(mensaje), '_blank', 'noopener');
   });
 }
 

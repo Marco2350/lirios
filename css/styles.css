@@ -4,18 +4,20 @@
    ========================================================================== */
 
 :root {
-  /* Colores de marca (rediseño 2026-08-02, iteración 3: de vuelta a blanco +
-     verde salvia/botánico, tras probar dorado elegante brevemente — ver
-     CLAUDE.md §3). Los nombres de variable se conservan tal cual para no
-     tocar cientos de referencias var(--mostaza) etc. en todo el sitio; lo
-     que cambió es el valor. */
-  --mostaza: #4F6144;
-  --mostaza-dark: #37452F;
-  --mostaza-light: #C7D3BB;
+  /* Colores de marca (rediseño 2026-08-05, iteración 4: dorado antiguo con
+     textura tipo foil metálico, reemplazando el verde salvia — ver
+     CLAUDE.md §3). Los valores retoman el dorado ya validado con la clienta
+     el 2026-08-02 (#B8933E / #8F6F2C / #D9C08A sobre fondo cálido). Los
+     nombres de variable se conservan tal cual para no tocar cientos de
+     referencias var(--mostaza) etc. en todo el sitio; lo que cambió es el
+     valor. */
+  --mostaza: #B8933E;
+  --mostaza-dark: #8F6F2C;
+  --mostaza-light: #D9C08A;
   --crema: #FFFFFF;
-  --crema-suave: #F5F6F2;
-  --carbon: #23261F;
-  --gris-calido: #6B7268;
+  --crema-suave: #F6F6F4;
+  --carbon: #241F17;
+  --gris-calido: #726A57;
   --blanco: #FFFFFF;
   --whatsapp-green: #25D366;
   --whatsapp-dark: #1DA851;
@@ -24,8 +26,15 @@
      mostaza/whatsapp-dark de arriba no alcanzan 4.5:1 en tamaños chicos
      (WCAG AA). No reemplazan a las variables de marca, que siguen usándose
      tal cual en botones, bordes e íconos donde el contraste sí es correcto. */
-  --mostaza-texto: #3C4A34;
+  --mostaza-texto: #6E5220;
   --exito-texto: #1B7A42;
+
+  /* Textura tipo oro: gradiente foil (sheen) + veta metálica fina, usados
+     juntos como múltiples backgrounds sobre superficies doradas (botón
+     primario, acento del hero) en vez de un relleno plano. Sin imágenes ni
+     CDNs: solo gradientes CSS. */
+  --gold-shine: linear-gradient(135deg, #F1E1B0 0%, #D4B268 24%, #B8933E 50%, #8F6F2C 68%, #D4B268 86%, #F1E1B0 100%);
+  --gold-brushed: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.32) 0px, rgba(255, 255, 255, 0.32) 1px, transparent 1px, transparent 4px);
 
   /* Tipografía - inspirada en stampahn.com: DM Sans para títulos/UI
      (bold, geométrica, con carácter gráfico) + Arimo para texto de cuerpo */
@@ -39,9 +48,9 @@
   --radius-lg: 20px;
 
   /* Sombras contemporáneas y lujosas (más profundidad, más control) */
-  --shadow-soft: 0 8px 30px -12px rgba(35, 38, 31, 0.10), 0 2px 8px rgba(35, 38, 31, 0.05);
-  --shadow-hover: 0 20px 50px -15px rgba(35, 38, 31, 0.16), 0 8px 16px rgba(35, 38, 31, 0.08);
-  --shadow-elevated: 0 30px 70px -20px rgba(35, 38, 31, 0.22);
+  --shadow-soft: 0 8px 30px -12px rgba(36, 31, 23, 0.10), 0 2px 8px rgba(36, 31, 23, 0.05);
+  --shadow-hover: 0 20px 50px -15px rgba(36, 31, 23, 0.16), 0 8px 16px rgba(36, 31, 23, 0.08);
+  --shadow-elevated: 0 30px 70px -20px rgba(36, 31, 23, 0.22);
 
   --header-h: 76px;
 
@@ -155,7 +164,7 @@ p {
   text-transform: uppercase;
   color: var(--mostaza-light);
   margin-bottom: 0.9rem;
-  box-shadow: 0 6px 16px rgba(35, 38, 31, 0.18);
+  box-shadow: 0 6px 16px rgba(36, 31, 23, 0.18);
 }
 
 .eyebrow::before {
@@ -205,25 +214,29 @@ p {
   justify-content: center;
   gap: 0.6rem;
   padding: 0.95rem 2.1rem;
-  border: 1.5px solid var(--mostaza);
+  border: 1.5px solid var(--mostaza-dark);
   border-radius: 999px;
-  background-color: var(--mostaza);
+  /* Textura tipo oro: veta metálica fina sobre el degradado foil, en vez
+     de un relleno plano — ver --gold-shine/--gold-brushed en :root */
+  background-image: var(--gold-brushed), var(--gold-shine);
+  background-size: auto, 240% 240%;
+  background-position: 0 0, 0% 50%;
   color: var(--carbon);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 0.94rem;
   letter-spacing: 0.035em;
   text-transform: uppercase;
-  transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
-  box-shadow: 0 2px 8px rgba(79, 97, 68, 0.18);
+  transition: background-position 0.45s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.23, 1.0, 0.32, 1), box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(143, 111, 44, 0.25);
 }
 
 .btn:hover {
-  background-color: var(--mostaza-dark);
-  border-color: var(--mostaza-dark);
-  color: var(--blanco);
+  background-position: 0 0, 100% 50%;
+  border-color: var(--carbon);
+  color: var(--carbon);
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(55, 69, 47, 0.28);
+  box-shadow: 0 8px 22px rgba(143, 111, 44, 0.4);
 }
 
 .btn:active {
@@ -234,7 +247,7 @@ p {
   background-color: transparent;
   color: var(--carbon);
   box-shadow: none;
-  border-color: rgba(35, 38, 31, 0.65);
+  border-color: rgba(36, 31, 23, 0.65);
 }
 
 .btn-outline:hover {
@@ -249,7 +262,7 @@ p {
   background-color: var(--carbon);
   border-color: var(--carbon);
   color: var(--crema);
-  box-shadow: 0 2px 10px rgba(35, 38, 31, 0.22);
+  box-shadow: 0 2px 10px rgba(36, 31, 23, 0.22);
   text-transform: none;
   letter-spacing: normal;
 }
@@ -279,7 +292,7 @@ p {
   z-index: 50;
   background-color: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(79, 97, 68, 0.18);
+  border-bottom: 1px solid rgba(143, 111, 44, 0.18);
 }
 
 .header-inner {
@@ -417,7 +430,7 @@ p {
     radial-gradient(ellipse 55% 65% at 88% 8%, rgba(199, 211, 187, 0.18), transparent 68%),
     radial-gradient(ellipse 40% 50% at 4% 96%, rgba(199, 211, 187, 0.10), transparent 70%),
     var(--crema);
-  border-bottom: 1px solid rgba(79, 97, 68, 0.08);
+  border-bottom: 1px solid rgba(143, 111, 44, 0.08);
 }
 
 /* Marca de agua tipográfica gigante */
@@ -431,8 +444,8 @@ p {
   letter-spacing: -0.02em;
   font-size: clamp(7rem, 22vw, 19rem);
   line-height: 1;
-  color: rgba(79, 97, 68, 0.045);
-  -webkit-text-stroke: 1px rgba(79, 97, 68, 0.10);
+  color: rgba(143, 111, 44, 0.045);
+  -webkit-text-stroke: 1px rgba(143, 111, 44, 0.10);
   pointer-events: none;
   user-select: none;
   z-index: 0;
@@ -534,8 +547,10 @@ p {
   width: min(440px, 92vw);
 }
 
-/* Firma visual: acorde orgánico (pétalo) en mostaza detrás del carrusel —
-   la versión floral del bloque de color audaz de stampahn.com */
+/* Firma visual: acorde orgánico (pétalo) en dorado detrás del carrusel —
+   la versión floral del bloque de color audaz de stampahn.com. Lleva
+   textura tipo foil (veta metálica fina sobre el degradado) en vez de un
+   relleno plano — ver --gold-shine/--gold-brushed en :root. */
 .hero-carousel::before {
   content: "";
   position: absolute;
@@ -544,7 +559,7 @@ p {
   right: -14%;
   width: 82%;
   height: 88%;
-  background: linear-gradient(150deg, var(--mostaza-light) 0%, var(--mostaza) 55%, var(--mostaza-dark) 100%);
+  background-image: var(--gold-brushed), linear-gradient(150deg, var(--mostaza-light) 0%, var(--mostaza) 55%, var(--mostaza-dark) 100%);
   border-radius: 42% 58% 39% 61% / 55% 42% 58% 45%;
   opacity: 0.92;
 }
@@ -570,7 +585,7 @@ p {
   left: 26px;
   right: -20px;
   bottom: -20px;
-  border: 1.5px solid rgba(79, 97, 68, 0.45);
+  border: 1.5px solid rgba(143, 111, 44, 0.45);
   border-radius: var(--radius-lg);
   pointer-events: none;
 }
@@ -754,8 +769,8 @@ p {
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(35, 38, 31, 0.0) 55%,
-    rgba(35, 38, 31, 0.035) 82%
+    rgba(36, 31, 23, 0.0) 55%,
+    rgba(36, 31, 23, 0.035) 82%
   );
   pointer-events: none;
 }
@@ -773,8 +788,8 @@ p {
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.025em;
-  box-shadow: 0 4px 14px rgba(35, 38, 31, 0.12);
-  border: 1px solid rgba(79, 97, 68, 0.2);
+  box-shadow: 0 4px 14px rgba(36, 31, 23, 0.12);
+  border: 1px solid rgba(143, 111, 44, 0.2);
   transition: all 0.2s ease;
 }
 
@@ -804,7 +819,7 @@ p {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1.5px solid rgba(79, 97, 68, 0.45);
+  border: 1.5px solid rgba(143, 111, 44, 0.45);
   background-color: transparent;
   color: var(--carbon);
   transition: background-color 0.2s ease, border-color 0.2s ease;
@@ -882,7 +897,7 @@ p {
 .product-card:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-elevated);
-  border-color: rgba(79, 97, 68, 0.18);
+  border-color: rgba(143, 111, 44, 0.18);
 }
 
 .product-card .card-img {
@@ -908,7 +923,7 @@ p {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 60%, rgba(35,38,31,0.035) 100%);
+  background: linear-gradient(to bottom, transparent 60%, rgba(36,31,23,0.035) 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -1024,7 +1039,7 @@ p {
 .form-field textarea:focus {
   border-color: var(--mostaza);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(79, 97, 68, 0.09);
+  box-shadow: 0 0 0 3px rgba(143, 111, 44, 0.09);
 }
 
 .results-count {
@@ -1163,7 +1178,7 @@ p {
 .talla-opcion.selected {
   border-color: var(--mostaza);
   background: var(--crema-suave);
-  box-shadow: 0 0 0 2px rgba(79, 97, 68, 0.2);
+  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.2);
 }
 
 .talla-opcion:disabled {
@@ -1194,11 +1209,11 @@ p {
 
 .ramo-preview {
   height: 380px;
-  background: linear-gradient(180deg, #EEF1E9 0%, #E1E7D9 100%);
+  background: linear-gradient(180deg, #F5F5F3 0%, #E8E8E3 100%);
   border-radius: 20px;
   overflow: hidden;
-  border: 1px solid #DCE3D3;
-  box-shadow: 0 12px 40px rgba(35,38,31,0.12), inset 0 0 0 1px #fff;
+  border: 1px solid #E1E1DB;
+  box-shadow: 0 12px 40px rgba(36,31,23,0.12), inset 0 0 0 1px #fff;
   position: relative;
 }
 
@@ -1216,7 +1231,7 @@ p {
 
 .flower-card {
   background: #fff;
-  border: 1px solid #DCE3D3;
+  border: 1px solid #E1E1DB;
   border-radius: 12px;
   padding: 6px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
@@ -1225,13 +1240,13 @@ p {
 }
 
 .flower-card:hover {
-  border-color: #4F6144;
+  border-color: #B8933E;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   transform: translateY(-1px);
 }
 
 .flower-shape {
-  background: #F4F6F1;
+  background: #F6F6F4;
   padding: 6px;
   border-radius: 8px;
   min-height: 68px;
@@ -1247,12 +1262,12 @@ p {
 .flower-name {
   font-size: 13px;
   font-weight: 600;
-  color: #23261F;
+  color: #241F17;
 }
 
 .flower-price {
   font-size: 10px;
-  color: #6B7268;
+  color: #726A57;
 }
 
 /* Color swatches */
@@ -1261,13 +1276,13 @@ p {
   height: 18px;
   border-radius: 50%;
   border: 2px solid #fff;
-  box-shadow: 0 0 0 1px #C3CDB8;
+  box-shadow: 0 0 0 1px #C9C9BF;
   cursor: pointer;
   transition: transform 0.1s;
 }
 
 .color-swatch.active {
-  box-shadow: 0 0 0 2px #4F6144;
+  box-shadow: 0 0 0 2px #B8933E;
   transform: scale(1.1);
 }
 
@@ -1275,8 +1290,8 @@ p {
 .pers-qty {
   display: inline-flex;
   align-items: center;
-  background: #EEF1E9;
-  border: 1px solid #DCE3D3;
+  background: #F5F5F3;
+  border: 1px solid #E1E1DB;
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1286,14 +1301,14 @@ p {
   height: 23px;
   background: none;
   border: none;
-  color: #4F6144;
+  color: #B8933E;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .pers-qty button:hover {
-  background: #4F6144;
+  background: #B8933E;
   color: #fff;
 }
 
@@ -1312,7 +1327,7 @@ p {
 }
 
 .pers-add:hover {
-  background: #37452F;
+  background: #8F6F2C;
   transform: translateY(-0.5px);
 }
 
@@ -1323,7 +1338,7 @@ p {
   gap: 10px;
   padding: 10px 12px;
   background: #fff;
-  border: 1px solid #DCE3D3;
+  border: 1px solid #E1E1DB;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1332,21 +1347,21 @@ p {
 }
 
 .wrap-option:hover {
-  border-color: #4F6144;
-  background: #F4F6F1;
+  border-color: #B8933E;
+  background: #F6F6F4;
 }
 
 .wrap-option.selected {
-  border-color: #4F6144;
-  background: #F4F6F1;
-  box-shadow: 0 0 0 2px rgba(79, 97, 68, 0.2);
+  border-color: #B8933E;
+  background: #F6F6F4;
+  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.2);
 }
 
 .wrap-color {
   width: 40px;
   height: 40px;
   border-radius: 6px;
-  border: 1px solid #C3CDB8;
+  border: 1px solid #C9C9BF;
   flex-shrink: 0;
   box-shadow: inset 0 1px 2px rgba(255,255,255,0.5);
 }
@@ -1359,13 +1374,13 @@ p {
 .wrap-name {
   font-weight: 600;
   font-size: 13px;
-  color: #23261F;
+  color: #241F17;
   line-height: 1.2;
 }
 
 .wrap-desc {
   font-size: 10px;
-  color: #6B7268;
+  color: #726A57;
   line-height: 1.3;
   margin-top: 2px;
 }
@@ -1398,13 +1413,13 @@ p {
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
-  color: #23261F;
+  color: #241F17;
   margin-bottom: 6px;
 }
 
 .hint {
   font-size: 10px;
-  color: #6B7268;
+  color: #726A57;
   margin-top: 3px;
 }
 
@@ -1412,7 +1427,7 @@ p {
   background: #fff;
   padding: 4px;
   border-radius: 10px;
-  border: 1px solid #E1E7D9;
+  border: 1px solid #E8E8E3;
 }
 
 /* Extra design for sections */
@@ -1420,8 +1435,8 @@ p {
   background: #fff;
   padding: 10px;
   border-radius: 14px;
-  border: 1px solid #DCE3D3;
-  box-shadow: 0 1px 3px rgba(35,38,31,0.03);
+  border: 1px solid #E1E1DB;
+  box-shadow: 0 1px 3px rgba(36,31,23,0.03);
 }
 
 /* Make sure all option buttons have consistent nice look */
@@ -1451,9 +1466,9 @@ p {
   padding: 0.5rem 0.55rem 0.5rem 1.1rem;
   background-color: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(79, 97, 68, 0.28);
+  border: 1px solid rgba(143, 111, 44, 0.28);
   border-radius: 999px;
-  box-shadow: 0 8px 22px rgba(35, 38, 31, 0.16);
+  box-shadow: 0 8px 22px rgba(36, 31, 23, 0.16);
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
@@ -1540,7 +1555,7 @@ p {
   gap: 2px;
   padding: 9px 6px;
   background: #fff;
-  border: 1px solid #DCE3D3;
+  border: 1px solid #E1E1DB;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1548,14 +1563,14 @@ p {
 }
 
 .extra-option:hover {
-  border-color: #4F6144;
-  background: #F4F6F1;
+  border-color: #B8933E;
+  background: #F6F6F4;
 }
 
 .extra-option.selected {
-  border-color: #4F6144;
-  background: #F4F6F1;
-  box-shadow: 0 0 0 2px rgba(79, 97, 68, 0.2);
+  border-color: #B8933E;
+  background: #F6F6F4;
+  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.2);
 }
 
 .extra-name {
@@ -1567,14 +1582,14 @@ p {
 
 .extra-price {
   font-size: 11px;
-  color: #6B7268;
+  color: #726A57;
 }
 
 #dedicatoria {
   width: 100%;
   margin-top: 4px;
   padding: 8px;
-  border: 1px solid #DCE3D3;
+  border: 1px solid #E1E1DB;
   border-radius: 8px;
   font-size: 14px;
   resize: vertical;
@@ -1583,7 +1598,7 @@ p {
 }
 
 #dedicatoria:focus {
-  border-color: #4F6144;
+  border-color: #B8933E;
   outline: none;
 }
 
@@ -1591,7 +1606,7 @@ p {
 #dedicatoria {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #DCE3D3;
+  border: 1px solid #E1E1DB;
   border-radius: 8px;
   font-family: inherit;
   font-size: 14px;
@@ -1603,8 +1618,8 @@ p {
 
 #dedicatoria:focus {
   outline: none;
-  border-color: #4F6144;
-  box-shadow: 0 0 0 2px rgba(79, 97, 68, 0.1);
+  border-color: #B8933E;
+  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.1);
 }
 
 /* Ribbon options - small nice buttons */
@@ -1615,7 +1630,7 @@ p {
   gap: 2px;
   padding: 8px 4px;
   background: #fff;
-  border: 1px solid #DCE3D3;
+  border: 1px solid #E1E1DB;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1626,27 +1641,27 @@ p {
 }
 
 .ribbon-option:hover {
-  border-color: #4F6144;
-  background: #F4F6F1;
+  border-color: #B8933E;
+  background: #F6F6F4;
 }
 
 .ribbon-option.selected {
-  border-color: #4F6144;
-  background: #F4F6F1;
-  box-shadow: 0 0 0 2px rgba(79, 97, 68, 0.2);
+  border-color: #B8933E;
+  background: #F6F6F4;
+  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.2);
 }
 
 .ribbon-color {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1px solid #C3CDB8;
+  border: 1px solid #C9C9BF;
   box-shadow: inset 0 1px 1px rgba(255,255,255,0.5);
 }
 
 .ribbon-name {
   font-size: 9px;
-  color: #23261F;
+  color: #241F17;
   text-align: center;
   line-height: 1.1;
   margin-top: 2px;
@@ -1670,7 +1685,7 @@ p {
 }
 
 #opt-wraps button:hover, #opt-ribbons button:hover {
-  border-color: #4F6144;
+  border-color: #B8933E;
 }
 
 /* Summary */
@@ -1688,11 +1703,11 @@ p {
   gap: 4px;
   padding: 2px 9px;
   background: #fff;
-  border: 1px solid #DCE3D3;
+  border: 1px solid #E1E1DB;
   border-radius: 999px;
   font-size: 10px;
   line-height: 1.2;
-  color: #23261F;
+  color: #241F17;
   white-space: nowrap;
 }
 
@@ -1725,13 +1740,13 @@ p {
 /* Beautiful Premium Preview */
 .ramo-preview {
   height: 408px;
-  background: linear-gradient(178deg, #F0F3EC 0%, #E1E7D9 100%);
+  background: linear-gradient(178deg, #F6F6F4 0%, #E8E8E3 100%);
   border-radius: 22px;
   overflow: hidden;
-  border: 1px solid #D9E0CF;
+  border: 1px solid #E4E4DE;
   box-shadow: 
-    0 18px 48px rgba(35, 38, 31, 0.13),
-    0 6px 14px rgba(35, 38, 31, 0.07),
+    0 18px 48px rgba(36, 31, 23, 0.13),
+    0 6px 14px rgba(36, 31, 23, 0.07),
     inset 0 1px 0 rgba(255,255,255,0.9),
     inset 0 0 0 1px #fff;
   position: relative;
@@ -1761,22 +1776,22 @@ p {
 
 #opt-flores .flower-card {
   background: #fff;
-  border: 1px solid #D9E0CF;
+  border: 1px solid #E4E4DE;
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 3px 9px rgba(35,38,31,0.06), 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow: 0 3px 9px rgba(36,31,23,0.06), 0 1px 2px rgba(0,0,0,0.02);
   transition: transform 0.2s cubic-bezier(0.23,1,0.32,1), box-shadow 0.2s ease, border-color 0.2s ease;
   cursor: pointer;
 }
 
 #opt-flores .flower-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 14px 30px rgba(35,38,31,0.12), 0 3px 7px rgba(0,0,0,0.04);
-  border-color: #4F6144;
+  box-shadow: 0 14px 30px rgba(36,31,23,0.12), 0 3px 7px rgba(0,0,0,0.04);
+  border-color: #B8933E;
 }
 
 #opt-flores .flower-shape {
-  background: #F4F6F1;
+  background: #F6F6F4;
   padding: 10px 8px;
   display: flex;
   align-items: center;
@@ -1791,7 +1806,7 @@ p {
   position: absolute;
   inset: 6px;
   border-radius: 999px;
-  background: radial-gradient(circle at 45% 35%, rgba(79,97,68,0.045) 0%, transparent 70%);
+  background: radial-gradient(circle at 45% 35%, rgba(143,111,44,0.045) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -1802,12 +1817,12 @@ p {
 .flower-name {
   font-weight: 600;
   font-size: 13px;
-  color: #23261F;
+  color: #241F17;
 }
 
 .flower-price {
   font-size: 10px;
-  color: #6B7268;
+  color: #726A57;
   margin-top: 1px;
 }
 
@@ -1817,13 +1832,13 @@ p {
   height: 18px;
   border-radius: 50%;
   border: 1.5px solid #fff;
-  box-shadow: 0 0 0 1px #C3CDB8;
+  box-shadow: 0 0 0 1px #C9C9BF;
   cursor: pointer;
   transition: transform 0.1s ease;
 }
 
 .color-swatch.active {
-  box-shadow: 0 0 0 2px #4F6144, 0 0 0 3px #fff;
+  box-shadow: 0 0 0 2px #B8933E, 0 0 0 3px #fff;
   transform: scale(1.1);
 }
 
@@ -1959,9 +1974,9 @@ p {
 .summary-box {
   background: #fff;
   border-radius: 18px;
-  border: 1px solid #D9E0CF;
+  border: 1px solid #E4E4DE;
   padding: 16px 18px;
-  box-shadow: 0 6px 22px rgba(35,38,31,0.07);
+  box-shadow: 0 6px 22px rgba(36,31,23,0.07);
   margin-top: 12px;
 }
 
@@ -1975,7 +1990,7 @@ p {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #6B7268;
+  color: #726A57;
   margin-bottom: 1px;
 }
 
@@ -1993,7 +2008,7 @@ p {
 .summary-price {
   font-family: var(--font-display);
   font-size: 24px;
-  color: #4F6144;
+  color: #B8933E;
   font-weight: 700;
   line-height: 1;
 }
@@ -2002,7 +2017,7 @@ p {
   font-family: var(--font-display);
   font-size: 23px;
   font-weight: 700;
-  color: #4F6144;
+  color: #B8933E;
 }
 
 /* Section headers */
@@ -2010,7 +2025,7 @@ p {
   font-family: var(--font-display);
   font-size: 17px;
   font-weight: 600;
-  color: #23261F;
+  color: #241F17;
   margin-bottom: 8px;
 }
 
@@ -2029,9 +2044,9 @@ p {
 .qty-stepper {
   display: inline-flex;
   align-items: center;
-  background: #EEF1E9;
+  background: #F5F5F3;
   border-radius: 999px;
-  border: 1px solid #DCE3D3;
+  border: 1px solid #E1E1DB;
 }
 
 .qty-stepper button {
@@ -2041,7 +2056,7 @@ p {
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  color: #4F6144;
+  color: #B8933E;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -2122,8 +2137,8 @@ p {
 
 .option-card input:checked + .option-body {
   border-color: var(--mostaza);
-  background-color: #EEF1E9;
-  box-shadow: 0 1px 0 rgba(79, 97, 68, 0.12);
+  background-color: #F5F5F3;
+  box-shadow: 0 1px 0 rgba(143, 111, 44, 0.12);
 }
 
 /* (Duplicate legacy personalizer styles removed — main rules live above) */
@@ -2181,13 +2196,13 @@ p {
   height: 46px;
   border-radius: 999px;
   border: 3px solid var(--blanco);
-  box-shadow: 0 0 0 1px rgba(107, 114, 104, 0.25), 0 2px 5px rgba(35,38,31,0.1);
+  box-shadow: 0 0 0 1px rgba(107, 114, 104, 0.25), 0 2px 5px rgba(36,31,23,0.1);
   margin: 0 auto 0.35rem;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .swatch input:checked ~ .dot {
-  box-shadow: 0 0 0 3px var(--mostaza), 0 4px 10px rgba(79, 97, 68, 0.3);
+  box-shadow: 0 0 0 3px var(--mostaza), 0 4px 10px rgba(143, 111, 44, 0.3);
   transform: scale(1.03);
 }
 
@@ -2235,7 +2250,7 @@ p {
 .builder-summary {
   background-color: var(--blanco);
   border-radius: var(--radius);
-  border: 1px solid rgba(79, 97, 68, 0.1);
+  border: 1px solid rgba(143, 111, 44, 0.1);
   box-shadow: var(--shadow-elevated);
   padding: 1.5rem 1.5rem 1.85rem;
 }
@@ -2333,17 +2348,17 @@ p {
   position: absolute;
   width: 30px;
   height: 30px;
-  background: #C7D3BB;
+  background: #D9C08A;
   border-radius: 50%;
   border: 2.5px solid #fff;
-  box-shadow: 0 4px 8px rgba(35,38,31,0.18);
+  box-shadow: 0 4px 8px rgba(36,31,23,0.18);
   transition: all 0.3s cubic-bezier(0.23,1,0.32,1);
   display: block;
 }
 
 /* Reglas especiales de forma para cada tipo de flor (se aplican encima del color) */
 .preview-flower.rosa {
-  box-shadow: 0 4px 8px rgba(35,38,31,0.2), inset 0 5px 7px rgba(255,255,255,0.4);
+  box-shadow: 0 4px 8px rgba(36,31,23,0.2), inset 0 5px 7px rgba(255,255,255,0.4);
 }
 .preview-flower.rosa::after {
   content: '';
@@ -2353,7 +2368,7 @@ p {
 }
 
 .preview-flower.girasol {
-  box-shadow: 0 4px 8px rgba(35,38,31,0.2);
+  box-shadow: 0 4px 8px rgba(36,31,23,0.2);
   border-color: #f4e9c8;
 }
 .preview-flower.girasol::after {
@@ -2386,7 +2401,7 @@ p {
 /* Variantes según tipo de flor - las formas se aplican encima del color elegido */
 .preview-flower.rosa {
   width: 28px; height: 28px;
-  box-shadow: 0 2px 6px rgba(35,38,31,0.18), inset 0 4px 6px rgba(255,255,255,0.35);
+  box-shadow: 0 2px 6px rgba(36,31,23,0.18), inset 0 4px 6px rgba(255,255,255,0.35);
 }
 .preview-flower.rosa::after {
   content: '';
@@ -2397,7 +2412,7 @@ p {
 
 .preview-flower.girasol {
   width: 30px; height: 30px;
-  box-shadow: 0 2px 6px rgba(35,38,31,0.2);
+  box-shadow: 0 2px 6px rgba(36,31,23,0.2);
   border: 2px solid #f4e9c8;
 }
 .preview-flower.girasol::after {
@@ -2417,7 +2432,7 @@ p {
 
 .preview-flower.astromelia {
   width: 18px; height: 18px;
-  box-shadow: 0 1px 4px rgba(35,38,31,0.12);
+  box-shadow: 0 1px 4px rgba(36,31,23,0.12);
 }
 .preview-flower.astromelia::after {
   content: '✦';
@@ -2491,6 +2506,12 @@ p {
   font-size: 0.85rem;
   color: var(--gris-calido);
   margin: 0;
+}
+
+.item-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--mostaza-texto);
 }
 
 .item-side {
@@ -2569,8 +2590,8 @@ p {
 /* ---------- Banda CTA - Lujosa y directa ---------- */
 .cta-band {
   background: var(--crema-suave);
-  border-top: 1px solid rgba(79, 97, 68, 0.1);
-  border-bottom: 1px solid rgba(79, 97, 68, 0.1);
+  border-top: 1px solid rgba(143, 111, 44, 0.1);
+  border-bottom: 1px solid rgba(143, 111, 44, 0.1);
   text-align: center;
 }
 
@@ -2813,7 +2834,7 @@ p {
   left: 22px;
   right: -16px;
   bottom: -16px;
-  border: 1.5px solid rgba(79, 97, 68, 0.45);
+  border: 1.5px solid rgba(143, 111, 44, 0.45);
   border-radius: var(--radius-lg);
   pointer-events: none;
 }
@@ -2859,8 +2880,8 @@ p {
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
-  border: 1px solid rgba(79, 97, 68, 0.25);
-  box-shadow: 0 4px 14px rgba(35, 38, 31, 0.14);
+  border: 1px solid rgba(143, 111, 44, 0.25);
+  box-shadow: 0 4px 14px rgba(36, 31, 23, 0.14);
   transition: all 0.2s ease;
 }
 
@@ -2910,7 +2931,7 @@ p {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 1.5px solid rgba(79, 97, 68, 0.45);
+  border: 1.5px solid rgba(143, 111, 44, 0.45);
   color: var(--carbon);
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
@@ -3047,73 +3068,6 @@ p {
   color: var(--mostaza-light);
 }
 
-/* ---------- Modal de confirmación del pedido (imagen-resumen) ---------- */
-.order-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  background-color: rgba(35, 38, 31, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.order-modal-backdrop[hidden] {
-  display: none;
-}
-
-.order-modal {
-  position: relative;
-  width: min(440px, 100%);
-  max-height: 90vh;
-  overflow-y: auto;
-  background-color: var(--blanco);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-elevated);
-  padding: 2rem;
-  text-align: center;
-}
-
-.order-modal h2 {
-  font-size: 1.35rem;
-  margin-bottom: 0.6rem;
-}
-
-.order-modal p {
-  color: var(--gris-calido);
-  font-size: 0.92rem;
-}
-
-.order-modal-preview {
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--mostaza-light);
-  margin: 1rem 0 1.4rem;
-  box-shadow: var(--shadow-soft);
-}
-
-.order-modal-close {
-  position: absolute;
-  top: 0.9rem;
-  right: 0.9rem;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background-color: var(--crema-suave);
-  color: var(--carbon);
-  font-size: 1.3rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.order-modal-close:hover {
-  background-color: var(--mostaza-light);
-}
-
 /* ---------- Páginas legales (Política de Privacidad, Términos) ---------- */
 .legal-content {
   max-width: 760px;
@@ -3226,7 +3180,7 @@ p {
   border-radius: 50%;
   background-color: var(--carbon);
   color: var(--crema);
-  box-shadow: 0 10px 26px rgba(35, 38, 31, 0.32);
+  box-shadow: 0 10px 26px rgba(36, 31, 23, 0.32);
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
@@ -3246,7 +3200,7 @@ p {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid rgba(79, 97, 68, 0.55);
+  border: 2px solid rgba(143, 111, 44, 0.55);
   animation: wa-pulse 2.6s ease-out infinite;
   pointer-events: none;
 }
@@ -3384,7 +3338,7 @@ p {
     flex-direction: column;
     gap: 0;
     background-color: var(--crema);
-    border-bottom: 1px solid rgba(79, 97, 68, 0.18);
+    border-bottom: 1px solid rgba(143, 111, 44, 0.18);
     box-shadow: var(--shadow-soft);
     padding: 0.5rem 0 1rem;
     display: none;

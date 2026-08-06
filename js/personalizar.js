@@ -449,7 +449,7 @@ function updateLive() {
       const x = opciones.extras?.find(e => e.id === id);
       if (x) html += `<span class="selection-chip">+ ${escapeHtml(x.nombre)}</span>`;
     });
-    if (state.message) html += `<span style="font-size:10px;color:#6B7268;margin-left:2px;">+ dedicatoria</span>`;
+    if (state.message) html += `<span style="font-size:10px;color:#726A57;margin-left:2px;">+ dedicatoria</span>`;
     summaryEl.innerHTML = html;
   }
 

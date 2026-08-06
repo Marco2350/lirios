@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800;1,700&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/styles.css?v=10">
 </head>
 <body>
 
@@ -69,19 +69,19 @@
                 <defs>
                   <!-- Rich warm studio background -->
                   <radialGradient id="previewBg" cx="48%" cy="28%" r="82%">
-                    <stop offset="0%" stop-color="#F0F3EC"/>
-                    <stop offset="48%" stop-color="#E8ECE1"/>
-                    <stop offset="100%" stop-color="#DCE3D3"/>
+                    <stop offset="0%" stop-color="#F6F6F4"/>
+                    <stop offset="48%" stop-color="#EFEFEA"/>
+                    <stop offset="100%" stop-color="#E1E1DB"/>
                   </radialGradient>
 
                   <!-- Elegant fine paper grain -->
                   <pattern id="paperGrain" patternUnits="userSpaceOnUse" width="48" height="48">
-                    <rect width="48" height="48" fill="#F0F3EC"/>
-                    <circle cx="7" cy="6" r="0.9" fill="#23261F" opacity="0.032"/>
-                    <circle cx="23" cy="19" r="0.65" fill="#23261F" opacity="0.026"/>
-                    <circle cx="36" cy="11" r="1.1" fill="#23261F" opacity="0.03"/>
-                    <circle cx="14" cy="34" r="0.75" fill="#23261F" opacity="0.038"/>
-                    <circle cx="41" cy="31" r="0.55" fill="#23261F" opacity="0.022"/>
+                    <rect width="48" height="48" fill="#F6F6F4"/>
+                    <circle cx="7" cy="6" r="0.9" fill="#241F17" opacity="0.032"/>
+                    <circle cx="23" cy="19" r="0.65" fill="#241F17" opacity="0.026"/>
+                    <circle cx="36" cy="11" r="1.1" fill="#241F17" opacity="0.03"/>
+                    <circle cx="14" cy="34" r="0.75" fill="#241F17" opacity="0.038"/>
+                    <circle cx="41" cy="31" r="0.55" fill="#241F17" opacity="0.022"/>
                   </pattern>
 
                   <!-- Soft premium flower shadow -->
@@ -125,7 +125,7 @@
                   <!-- Soft vignette -->
                   <radialGradient id="vignette" cx="50%" cy="46%" r="72%" fx="50%" fy="38%">
                     <stop offset="58%" stop-color="#000" stop-opacity="0"/>
-                    <stop offset="100%" stop-color="#23261F" stop-opacity="0.095"/>
+                    <stop offset="100%" stop-color="#241F17" stop-opacity="0.095"/>
                   </radialGradient>
                 </defs>
 
@@ -140,11 +140,11 @@
                 <ellipse cx="102" cy="38" rx="71" ry="29" fill="#fff" opacity="0.065"/>
 
                 <!-- Sombra de apoyo del ramo (posición dinámica) -->
-                <ellipse id="ground-shadow" cx="100" cy="214" rx="46" ry="7" fill="#23261F" opacity="0.08"/>
+                <ellipse id="ground-shadow" cx="100" cy="214" rx="46" ry="7" fill="#241F17" opacity="0.08"/>
 
                 <!-- Papel: abanico trasero con picos y cara interna (d dinámico) -->
-                <path id="wrap-back" d="" fill="#ECF0E6"/>
-                <path id="wrap-inner" d="" fill="#D5DECB"/>
+                <path id="wrap-back" d="" fill="#EEEEE8"/>
+                <path id="wrap-inner" d="" fill="#DEDED6"/>
 
                 <!-- Tallos (visibles entre la cúpula y el cono) -->
                 <g id="stems"></g>
@@ -156,9 +156,9 @@
                 <g id="flowers"></g>
 
                 <!-- Cono frontal del papel: termina en punta (d dinámico) -->
-                <path id="wrap" d="" fill="#DCE3D3" stroke="#C3CDB8" stroke-width="1.6" stroke-linejoin="round"/>
+                <path id="wrap" d="" fill="#E1E1DB" stroke="#C9C9BF" stroke-width="1.6" stroke-linejoin="round"/>
                 <path id="wrap-rim" d="" fill="none" stroke="#fff" stroke-width="2.4" opacity="0.4"/>
-                <path id="wrap-fold" d="" fill="none" stroke="#C3CDB8" stroke-width="1.1" opacity="0.6"/>
+                <path id="wrap-fold" d="" fill="none" stroke="#C9C9BF" stroke-width="1.1" opacity="0.6"/>
 
                 <!-- Listón con moño en la cintura -->
                 <g id="ribbon-visual"></g>
@@ -185,7 +185,7 @@
           <!-- CONTROLS -->
           <form id="builder-form">
             <div style="margin-bottom:12px;">
-              <div style="color:#4F6144; font-size:11px; letter-spacing:1px; text-transform:uppercase; font-weight:600;">Tu ramo, tus reglas</div>
+              <div style="color:#B8933E; font-size:11px; letter-spacing:1px; text-transform:uppercase; font-weight:600;">Tu ramo, tus reglas</div>
               <h2 style="font-family:var(--font-display); font-size:25px; margin:3px 0 0; line-height:1.05;">Diseña tu ramo flor por flor.</h2>
             </div>
 
@@ -302,6 +302,6 @@
     }
   </script>
   <script type="module" src="js/main.js?v=3"></script>
-  <script type="module" src="js/personalizar.js?v=5"></script>
+  <script type="module" src="js/personalizar.js?v=6"></script>
 </body>
 </html>

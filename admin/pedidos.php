@@ -85,6 +85,7 @@ admin_header('Pedidos', 'pedidos.php');
                     <?php foreach ($itemsPorPedido[$p['id']] ?? [] as $it): ?>
                       <li>
                         <?= (int) $it['cantidad'] ?>× <?= e($it['nombre']) ?> — L. <?= number_format((float) $it['subtotal'], 2) ?>
+                        <?php if ($it['codigo']): ?> <code><?= e($it['codigo']) ?></code><?php endif; ?>
                         <?php if ($it['detalle']): ?><br><small class="muted"><?= e($it['detalle']) ?></small><?php endif; ?>
                       </li>
                     <?php endforeach; ?>
