@@ -44,32 +44,62 @@ async function loadProductoDetalle(slug) {
 
 function precioTexto(producto) {
   if (producto.precioDesde == null) return 'Precio a consultar';
-  const varias = (producto.variantes || []).filter((v) => v.disponible).length > 1;
-  return (varias ? 'Desde ' : '') + formatPrice(producto.precioDesde);
+  return formatPrice(producto.precioDesde);
 }
 
 function productCardHtml(producto) {
   const etiqueta = producto.subcategoria?.nombre || producto.categoria?.nombre || '';
-  const unicaVariante = (producto.variantes || []).filter((v) => v.disponible).length === 1;
-  const variante = unicaVariante ? producto.variantes.find((v) => v.disponible) : null;
+  const variantesDisponibles = (producto.variantes || []).filter((v) => v.disponible);
+  const variantePorDefecto = variantesDisponibles[0] || null;
+  const mostrarTallas = variantesDisponibles.length > 1;
 
   return `
-  <article class="product-card reveal">
+  <article class="product-card reveal" data-slug="${escapeHtml(producto.slug)}">
     <a class="card-img" href="producto.html?id=${encodeURIComponent(producto.slug)}" aria-label="Ver ${escapeHtml(producto.nombre)}">
       <img src="${escapeHtml(producto.imagen || 'images/logo.png')}" alt="${escapeHtml(producto.nombre)}" loading="lazy">
     </a>
     <p class="card-occasion">${escapeHtml(etiqueta)}</p>
     <h3><a href="producto.html?id=${encodeURIComponent(producto.slug)}">${escapeHtml(producto.nombre)}</a></h3>
-    <p class="card-price">${precioTexto(producto)}</p>
+    <p class="card-price" data-card-price>${variantePorDefecto ? formatPrice(variantePorDefecto.precio) : precioTexto(producto)}</p>
+    ${
+      mostrarTallas
+        ? `<div class="card-tallas" role="group" aria-label="Elegir talla">
+            ${variantesDisponibles
+              .map(
+                (v, i) => `
+              <button type="button" class="talla-chip ${i === 0 ? 'selected' : ''}"
+                data-talla-chip="${escapeHtml(v.talla)}" data-precio="${v.precio}">${escapeHtml(v.talla)}</button>`
+              )
+              .join('')}
+          </div>`
+        : ''
+    }
     <div class="card-actions">
       <a class="btn btn-outline" href="producto.html?id=${encodeURIComponent(producto.slug)}">Ver detalle</a>
       ${
-        variante
-          ? `<button type="button" class="btn" data-add="${escapeHtml(producto.slug)}" data-talla="${escapeHtml(variante.talla)}">Agregar</button>`
+        variantePorDefecto
+          ? `<button type="button" class="btn" data-add="${escapeHtml(producto.slug)}" data-talla="${escapeHtml(variantePorDefecto.talla)}">Agregar</button>`
           : ''
       }
     </div>
   </article>`;
+}
+
+function wireTallaChips(contenedor) {
+  contenedor.addEventListener('click', (e) => {
+    const chip = e.target.closest('.talla-chip');
+    if (!chip) return;
+    const card = chip.closest('.product-card');
+    if (!card) return;
+
+    card.querySelectorAll('.talla-chip').forEach((c) => c.classList.toggle('selected', c === chip));
+
+    const precioEl = card.querySelector('[data-card-price]');
+    if (precioEl) precioEl.textContent = formatPrice(Number(chip.dataset.precio));
+
+    const addBtn = card.querySelector('button[data-add]');
+    if (addBtn) addBtn.dataset.talla = chip.dataset.tallaChip;
+  });
 }
 
 function wireAddButtons(contenedor, productos) {
@@ -118,6 +148,7 @@ async function initFeatured() {
   if (!grid) return;
   const productos = (await loadProductos()).filter((p) => p.destacado).slice(0, 4);
   grid.innerHTML = productos.map(productCardHtml).join('');
+  wireTallaChips(grid);
   wireAddButtons(grid, productos);
   revealNow(grid);
 }
@@ -128,22 +159,34 @@ async function initCatalog() {
   const grid = document.getElementById('catalog-grid');
   if (!grid) return;
 
-  const selCategoria = document.getElementById('filter-categoria');
+  const chipsWrap = document.getElementById('category-chips');
   const selSubcategoria = document.getElementById('filter-subcategoria');
   const selOrden = document.getElementById('sort-precio');
   const inputBusqueda = document.getElementById('search-input');
   const countEl = document.getElementById('results-count');
 
   const categorias = await loadCategorias();
-  categorias.forEach((c) => {
-    selCategoria.insertAdjacentHTML(
-      'beforeend',
-      `<option value="${escapeHtml(c.slug)}">${escapeHtml((c.icono ? c.icono + ' ' : '') + c.nombre)}</option>`
-    );
-  });
+  let categoriaActual = '';
+
+  /* Chips de categoría (reemplazan el <select> de categoría) — se navegan
+     con un toque y hacen scroll horizontal solas en móvil, en vez de abrir
+     un <select> nativo. Usan el mismo ícono/emoji que ya vive en
+     categorias.icono (antes solo se mostraba dentro del <option>). */
+  function renderChips() {
+    const opciones = [{ slug: '', nombre: 'Todas', icono: null }, ...categorias];
+    chipsWrap.innerHTML = opciones
+      .map(
+        (c) => `
+      <button type="button" class="category-chip ${c.slug === categoriaActual ? 'selected' : ''}" data-categoria="${escapeHtml(c.slug)}">
+        ${c.icono ? `<span class="chip-icon">${escapeHtml(c.icono)}</span>` : ''}${escapeHtml(c.nombre)}
+      </button>`
+      )
+      .join('');
+  }
+  renderChips();
 
   function poblarSubcategorias() {
-    const cat = categorias.find((c) => c.slug === selCategoria.value);
+    const cat = categorias.find((c) => c.slug === categoriaActual);
     selSubcategoria.innerHTML = '<option value="">Todas las subcategorías</option>';
     selSubcategoria.disabled = !cat;
     if (cat) {
@@ -160,7 +203,7 @@ async function initCatalog() {
   async function render() {
     countEl.textContent = 'Buscando arreglos…';
     const productos = await loadProductos({
-      categoria: selCategoria.value,
+      categoria: categoriaActual,
       subcategoria: selSubcategoria.value,
       orden: selOrden.value,
       q: inputBusqueda?.value.trim() || '',
@@ -175,10 +218,15 @@ async function initCatalog() {
         ? '<p class="empty-msg">No encontramos arreglos con esos filtros. Prueba con otra combinación o <a href="personalizar.html">crea tu propio ramo</a>.</p>'
         : productos.map(productCardHtml).join('');
     revealNow(grid);
+    wireTallaChips(grid);
     wireAddButtons(grid, productos);
   }
 
-  selCategoria.addEventListener('change', () => {
+  chipsWrap.addEventListener('click', (e) => {
+    const btn = e.target.closest('.category-chip');
+    if (!btn) return;
+    categoriaActual = btn.dataset.categoria;
+    renderChips();
     poblarSubcategorias();
     render();
   });
@@ -335,21 +383,10 @@ async function initProductDetail() {
     if (relacionados.length === 0) {
       document.getElementById('related-section')?.setAttribute('hidden', '');
     } else {
-      relGrid.innerHTML = relacionados
-        .map(
-          (r) => `
-        <article class="product-card reveal visible">
-          <a class="card-img" href="producto.html?id=${encodeURIComponent(r.slug)}" aria-label="Ver ${escapeHtml(r.nombre)}">
-            <img src="${escapeHtml(r.imagen || 'images/logo.png')}" alt="${escapeHtml(r.nombre)}" loading="lazy">
-          </a>
-          <h3><a href="producto.html?id=${encodeURIComponent(r.slug)}">${escapeHtml(r.nombre)}</a></h3>
-          <p class="card-price">${r.precioDesde != null ? formatPrice(r.precioDesde) : 'Precio a consultar'}</p>
-          <div class="card-actions">
-            <a class="btn btn-outline" href="producto.html?id=${encodeURIComponent(r.slug)}">Ver detalle</a>
-          </div>
-        </article>`
-        )
-        .join('');
+      relGrid.innerHTML = relacionados.map(productCardHtml).join('');
+      revealNow(relGrid);
+      wireTallaChips(relGrid);
+      wireAddButtons(relGrid, relacionados);
     }
   }
 }
