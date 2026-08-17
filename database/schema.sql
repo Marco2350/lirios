@@ -3,12 +3,27 @@
 -- Fuente de verdad del catálogo y del personalizador.
 -- Se consulta en vivo desde /api/*.php (sitio público) y
 -- desde /admin (panel de administración).
+--
+-- INSTALACIÓN LIMPIA (hosting final / cPanel):
+-- 1. Crear la base de datos y el usuario desde "Bases de datos
+--    MySQL" en cPanel (el nombre queda con el prefijo de la cuenta,
+--    ej. "midominio_lirios") y asignar el usuario a esa base con
+--    todos los privilegios. Un usuario de cPanel normal NO tiene
+--    permiso para CREATE DATABASE por SQL, así que este script ya
+--    NO lo intenta — impórtalo con esa base ya seleccionada:
+--      · phpMyAdmin: elegir la base en el panel izquierdo antes de
+--        usar "Importar".
+--      · Línea de comandos: mysql -u USUARIO -p NOMBRE_BASE < schema.sql
+-- 2. Actualizar /.env (copiado de /.env.example) con host, nombre
+--    de base, usuario y contraseña reales de ese hosting.
+--
+-- DESARROLLO LOCAL (XAMPP): si necesitas crear la base tú mismo,
+-- descomenta las dos líneas siguientes antes de importar.
 -- =========================================================
 
-CREATE DATABASE IF NOT EXISTS lirios
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-USE lirios;
+-- CREATE DATABASE IF NOT EXISTS lirios
+--   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE lirios;
 
 -- ---------------------------------------------------------
 -- Taxonomía: categorías > subcategorías
@@ -269,53 +284,17 @@ INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
   ((SELECT id FROM categorias WHERE slug='peluches'), 'mini-peluches','Mini peluches',6);
 
 -- =========================================================
--- Datos semilla — catálogo de ejemplo (migrado de productos.json)
+-- Catálogo de productos: SIN datos semilla a propósito.
+--
+-- Los 7 productos de ejemplo (Ramo Dulce Amor, Canasta Primaveral,
+-- etc.) que existían aquí eran solo placeholders para desarrollo y
+-- se quitaron de esta instalación limpia para no publicar un
+-- catálogo ficticio por accidente. Claudia carga el catálogo real
+-- (nombre, categoría, tallas y precios, fotos) desde
+-- /admin/productos.php una vez que el sitio esté en el hosting
+-- final — ver CLAUDE.md sección 9, pendiente "Catálogo real de
+-- productos".
 -- =========================================================
-
-INSERT INTO productos (subcategoria_id, slug, nombre, descripcion_corta, descripcion, imagen, entrega_disponible, retiro_tienda_disponible, disponible, destacado) VALUES
-  ((SELECT s.id FROM subcategorias s JOIN categorias c ON c.id=s.categoria_id WHERE c.slug='ramos-florales' AND s.slug='rosas'),
-   'ramo-dulce-amor', 'Ramo Dulce Amor', 'Seis rosas rojas premium con chocolates finos y eucalipto.',
-   'Seis rosas rojas premium acompañadas de chocolates finos, gypsophila y eucalipto fresco, envueltas en papel estilo periódico con lazo dorado. El clásico que nunca falla para sorprender a esa persona especial.',
-   'images/productos/ramo-dulce-amor.png', 1, 1, 1, 1),
-
-  ((SELECT s.id FROM subcategorias s JOIN categorias c ON c.id=s.categoria_id WHERE c.slug='arreglos-en-base' AND s.slug='canastas'),
-   'canasta-primaveral', 'Canasta Primaveral', 'Canasta artesanal con lirios rosados, gerberas y hortensia.',
-   'Canasta artesanal de fibra natural con lirios orientales rosados, gerberas, mini rosas y hortensia, terminada con listón satinado. Un jardín completo para alegrar cualquier espacio.',
-   'images/productos/canasta-primaveral.png', 1, 1, 1, 1),
-
-  ((SELECT s.id FROM subcategorias s JOIN categorias c ON c.id=s.categoria_id WHERE c.slug='ramos-florales' AND s.slug='mixtos'),
-   'ramo-alba-rosa', 'Ramo Alba Rosa', 'Lirios, gerberas fucsia y rosas rosadas en papel blanco.',
-   'Lirios orientales en botón, gerberas fucsia, rosas rosadas y solidago dorado envueltos en papel blanco texturizado. Fresco, luminoso y perfecto para celebrar un día especial.',
-   'images/productos/ramo-alba-rosa.png', 1, 1, 1, 1),
-
-  ((SELECT s.id FROM subcategorias s JOIN categorias c ON c.id=s.categoria_id WHERE c.slug='arreglos-en-base' AND s.slug='ceramica'),
-   'jarron-coral', 'Jarrón Coral', 'Arreglo en jarrón de cerámica con gerberas coral y astromelias.',
-   'Arreglo en jarrón de cerámica blanca con gerberas coral, mini rosas, astromelias y margaritas, decorado con listones "Love is eternal". Ideal para regalar sin preocuparse por el florero.',
-   'images/productos/jarron-coral.png', 1, 1, 1, 0),
-
-  ((SELECT s.id FROM subcategorias s JOIN categorias c ON c.id=s.categoria_id WHERE c.slug='ramos-florales' AND s.slug='gerberas'),
-   'ramo-durazno', 'Ramo Durazno', 'Gerbera durazno con claveles crema y eucalipto.',
-   'Una gerbera durazno como protagonista, rodeada de claveles crema, gypsophila y eucalipto, en envoltura melocotón de doble capa. Un detalle delicado que dice mucho con poco.',
-   'images/productos/ramo-durazno.png', 1, 1, 1, 0),
-
-  ((SELECT s.id FROM subcategorias s JOIN categorias c ON c.id=s.categoria_id WHERE c.slug='ramos-florales' AND s.slug='mixtos'),
-   'ramo-lila-festivo', 'Ramo Lila Festivo', 'Gerberas bicolor, solidago y margaritas en envoltura lila.',
-   'Gerberas bicolor rosadas, solidago amarillo, margaritas y eucalipto en envoltura lila de tul y papel coreano. Alegre, vibrante y listo para robarse las miradas en la fiesta.',
-   'images/productos/ramo-lila-festivo.png', 1, 1, 1, 1),
-
-  ((SELECT s.id FROM subcategorias s JOIN categorias c ON c.id=s.categoria_id WHERE c.slug='graduaciones' AND s.slug='arreglos'),
-   'arreglo-graduacion', 'Orgullo de Graduación', 'Caja rígida con birrete y rosas, claveles y gerberas.',
-   'Caja rígida negra coronada con birrete de graduación y un jardín de rosas fucsia, claveles, astromelias y gerberas en tonos rosa y crema. El regalo perfecto para celebrar ese gran logro.',
-   'images/productos/arreglo-graduacion.png', 1, 1, 1, 1);
-
-INSERT INTO producto_variantes (producto_id, talla, precio, disponible, orden) VALUES
-  ((SELECT id FROM productos WHERE slug='ramo-dulce-amor'),    'M', 950.00,  1, 1),
-  ((SELECT id FROM productos WHERE slug='canasta-primaveral'), 'M', 1150.00, 1, 1),
-  ((SELECT id FROM productos WHERE slug='ramo-alba-rosa'),     'M', 850.00,  1, 1),
-  ((SELECT id FROM productos WHERE slug='jarron-coral'),       'M', 1050.00, 1, 1),
-  ((SELECT id FROM productos WHERE slug='ramo-durazno'),       'M', 450.00,  1, 1),
-  ((SELECT id FROM productos WHERE slug='ramo-lila-festivo'),  'M', 750.00,  1, 1),
-  ((SELECT id FROM productos WHERE slug='arreglo-graduacion'), 'M', 1450.00, 1, 1);
 
 -- =========================================================
 -- Datos semilla — opciones del personalizador
