@@ -87,7 +87,7 @@ export function cartTotal() {
  * (perder el registro de una venta es mucho menos grave que impedir
  * que el pedido llegue al negocio).
  */
-function registrarPedido(cart, cliente, nota) {
+function registrarPedido(cart, datosCliente) {
   const items = cart.map((item) => ({
     id: item.id,
     codigo: item.codigo,
@@ -101,7 +101,18 @@ function registrarPedido(cart, cliente, nota) {
   fetch('api/pedidos.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cliente, nota, items }),
+    body: JSON.stringify({
+      cliente: datosCliente.nombre,
+      nota: datosCliente.nota,
+      telefono: datosCliente.telefono,
+      fechaEntrega: datosCliente.fechaEntrega,
+      horaEntrega: datosCliente.horaEntrega,
+      tipoEntrega: datosCliente.tipoEntrega,
+      direccion: datosCliente.direccion,
+      dedicatoria: datosCliente.dedicatoria,
+      pago: datosCliente.pago,
+      items,
+    }),
   }).catch(() => {
     /* Sin conexión o servidor caído: el pedido por WhatsApp sigue su curso */
   });
@@ -167,13 +178,17 @@ function renderCartPage() {
       const detalle = item.detalle
         ? `<p class="item-detail">${escapeHtml(item.detalle)}</p>`
         : '';
+      const codigo = item.codigo
+        ? `<span class="item-code">Código ${escapeHtml(item.codigo)}</span>`
+        : '';
       return `
       <article class="cart-item" data-key="${escapeHtml(item.key)}">
         <div class="item-img">${img}</div>
-        <div>
+        <div class="item-info">
           <h3>${escapeHtml(item.nombre)}</h3>
           ${detalle}
-          <p class="item-unit">${formatPrice(item.precio)} c/u · <span class="item-code">Código ${escapeHtml(item.codigo || '')}</span></p>
+          <p class="item-unit">${formatPrice(item.precio)} c/u</p>
+          ${codigo}
         </div>
         <div class="item-side">
           <span class="item-subtotal">${formatPrice(item.precio * item.cantidad)}</span>
@@ -182,7 +197,10 @@ function renderCartPage() {
             <span class="qty-value">${item.cantidad}</span>
             <button type="button" data-action="mas" aria-label="Agregar uno">+</button>
           </div>
-          <button type="button" class="remove-btn" data-action="eliminar">Eliminar</button>
+          <button type="button" class="remove-btn" data-action="eliminar" aria-label="Eliminar ${escapeHtml(item.nombre)} del carrito">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+            Eliminar
+          </button>
         </div>
       </article>`;
     })
@@ -215,17 +233,62 @@ function initCartPage() {
     }
   });
 
+  const CAMPOS_OBLIGATORIOS = [
+    'customer-name',
+    'customer-phone',
+    'customer-delivery-date',
+    'customer-delivery-type',
+  ];
+
+  // Quita el estado de error de un campo en cuanto el cliente empieza a corregirlo.
+  for (const id of CAMPOS_OBLIGATORIOS) {
+    document.getElementById(id)?.addEventListener('input', (e) => {
+      if (e.target.value.trim()) e.target.closest('.form-field')?.classList.remove('invalid');
+    });
+  }
+
+  /** Marca en rojo los campos obligatorios vacíos y enfoca el primero. Devuelve true si todo está completo. */
+  function validarCamposObligatorios() {
+    let primerCampoInvalido = null;
+    for (const id of CAMPOS_OBLIGATORIOS) {
+      const campo = document.getElementById(id);
+      const wrapper = campo?.closest('.form-field');
+      const vacio = !campo?.value.trim();
+      wrapper?.classList.toggle('invalid', vacio);
+      if (vacio && !primerCampoInvalido) primerCampoInvalido = campo;
+    }
+    if (primerCampoInvalido) {
+      primerCampoInvalido.focus();
+      showToast('Completa los campos obligatorios para enviar tu pedido');
+      return false;
+    }
+    return true;
+  }
+
   const enviarBtn = document.getElementById('send-whatsapp');
 
   enviarBtn?.addEventListener('click', () => {
     const cart = getCart();
     if (cart.length === 0) return;
-    const nombre = document.getElementById('customer-name')?.value.trim() ?? '';
-    const nota = document.getElementById('customer-note')?.value.trim() ?? '';
-    const total = cartTotal();
-    const mensaje = buildOrderMessage(cart, total, nombre, nota);
+    if (!validarCamposObligatorios()) return;
 
-    registrarPedido(cart, nombre, nota);
+    const valor = (id) => document.getElementById(id)?.value.trim() ?? '';
+    const datosCliente = {
+      nombre: valor('customer-name'),
+      telefono: valor('customer-phone'),
+      fechaEntrega: valor('customer-delivery-date'),
+      horaEntrega: valor('customer-delivery-time'),
+      tipoEntrega: valor('customer-delivery-type'),
+      direccion: valor('customer-address'),
+      dedicatoria: valor('customer-dedication'),
+      pago: valor('customer-payment'),
+      nota: valor('customer-note'),
+    };
+
+    const total = cartTotal();
+    const mensaje = buildOrderMessage(cart, total, datosCliente);
+
+    registrarPedido(cart, datosCliente);
     window.open(buildWaLink(mensaje), '_blank', 'noopener');
   });
 }

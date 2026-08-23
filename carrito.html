@@ -13,10 +13,18 @@
   <link rel="icon" type="image/png" href="images/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800;1,700&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=14">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css?v=29">
 </head>
 <body>
+
+  <div class="announce-bar">
+    <div class="container announce-bar-inner">
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h3l3 3v4h-6z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg>Entrega el mismo día en El Progreso</span>
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a9.9 9.9 0 0 0-8.5 15.1L2 22l5-1.4A10 10 0 1 0 12 2Z"/></svg>Atención personalizada por WhatsApp</span>
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18M12 8v13M8 8a2.5 2.5 0 0 1 0-5c1.5 0 3 1.5 4 5 1-3.5 2.5-5 4-5a2.5 2.5 0 0 1 0 5"/></svg>Empaques de lujo y detalles que enamoran</span>
+    </div>
+  </div>
 
   <header class="site-header">
     <div class="container header-inner">
@@ -25,8 +33,10 @@
       </a>
       <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
         <a href="index.html">Inicio</a>
-        <a href="catalogo.html">Catálogo</a>
-        <a href="personalizar.html">Personalizar</a>
+        <details class="nav-dropdown">
+          <summary>Catálogo <span class="nav-dropdown-caret"></span></summary>
+          <div class="nav-dropdown-panel" id="nav-categorias-menu"></div>
+        </details>
         <a href="nosotros.html">Nosotros</a>
         <a href="contacto.html">Contacto</a>
       </nav>
@@ -56,10 +66,9 @@
       <div class="cart-empty" id="cart-empty" hidden>
         <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="2.5"/><path d="M12 5.5C12 3.6 10.4 2 8.5 2c0 1.9 1.6 3.5 3.5 3.5Zm0 0C12 3.6 13.6 2 15.5 2c0 1.9-1.6 3.5-3.5 3.5Zm-2.5 2C7.6 7.5 6 5.9 6 4c1.9 0 3.5 1.6 3.5 3.5Zm5 0C14.5 5.6 16.1 4 18 4c0 1.9-1.6 3.5-3.5 3.5ZM12 10.5V22m0-6c-2.5 0-4.5-2-4.5-4.5M12 19c2.5 0 4.5-2 4.5-4.5"/></svg>
         <h2>Tu carrito está vacío</h2>
-        <p class="muted">Explora el catálogo o crea un ramo a tu medida para empezar tu pedido.</p>
+        <p class="muted">Explora el catálogo para empezar tu pedido.</p>
         <p style="display:flex; gap:0.8rem; justify-content:center; flex-wrap:wrap">
           <a class="btn" href="catalogo.html">Ver catálogo</a>
-          <a class="btn btn-outline" href="personalizar.html">Crear mi ramo</a>
         </p>
       </div>
 
@@ -74,14 +83,65 @@
             <span>Total</span>
             <span class="amount" id="cart-total">L. 0.00</span>
           </div>
+
+          <p class="required-legend"><span class="required-mark">*</span> Campos obligatorios</p>
+
           <div class="form-field">
-            <label for="customer-name">Tu nombre</label>
-            <input type="text" id="customer-name" maxlength="60" placeholder="Ej: María López" autocomplete="name">
+            <label for="customer-name">Nombre <span class="required-mark">*</span></label>
+            <input type="text" id="customer-name" maxlength="60" placeholder="Ej: María López" autocomplete="name" required>
           </div>
           <div class="form-field">
-            <label for="customer-note">Nota para la floristería <span class="muted">(opcional)</span></label>
-            <textarea id="customer-note" maxlength="200" placeholder="Ej: Entrega el viernes por la tarde, por favor."></textarea>
+            <label for="customer-phone">Teléfono <span class="required-mark">*</span></label>
+            <input type="tel" id="customer-phone" maxlength="20" placeholder="Ej: 9988-7766" autocomplete="tel" required>
           </div>
+
+          <div class="form-section">
+            <span class="form-section-label">Entrega</span>
+            <div class="form-field-row">
+              <div class="form-field">
+                <label for="customer-delivery-date">Fecha <span class="required-mark">*</span></label>
+                <input type="date" id="customer-delivery-date" required>
+              </div>
+              <div class="form-field">
+                <label for="customer-delivery-time">Hora</label>
+                <input type="time" id="customer-delivery-time">
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="customer-delivery-type">Delivery o retiro <span class="required-mark">*</span></label>
+              <select id="customer-delivery-type" required>
+                <option value="">Sin especificar</option>
+                <option value="Delivery a domicilio">Delivery a domicilio</option>
+                <option value="Retiro en tienda">Retiro en tienda</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="customer-address">Dirección de entrega</label>
+              <input type="text" id="customer-address" maxlength="200" placeholder="Ej: Barrio El Centro, 2da calle, casa color celeste" autocomplete="street-address">
+            </div>
+          </div>
+
+          <details class="extra-details">
+            <summary>
+              <span>Dedicatoria, forma de pago o nota <span class="muted">(opcional)</span></span>
+              <span class="nav-dropdown-caret"></span>
+            </summary>
+            <div class="extra-details-body">
+              <div class="form-field">
+                <label for="customer-dedication">Dedicatoria</label>
+                <textarea id="customer-dedication" maxlength="200" placeholder="Ej: Feliz cumpleaños, te quiero mucho."></textarea>
+              </div>
+              <div class="form-field">
+                <label for="customer-payment">Forma de pago</label>
+                <input type="text" id="customer-payment" maxlength="60" placeholder="Ej: Efectivo, transferencia...">
+              </div>
+              <div class="form-field">
+                <label for="customer-note">Nota para la floristería</label>
+                <textarea id="customer-note" maxlength="200" placeholder="Ej: Entrega el viernes por la tarde, por favor."></textarea>
+              </div>
+            </div>
+          </details>
+
           <button type="button" class="btn btn-whatsapp btn-block" id="send-whatsapp">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a9.9 9.9 0 0 0-8.5 15.1L2 22l5-1.4A10 10 0 1 0 12 2Zm5.2 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.2c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.9 1.8.3.2.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4.1.2.1.7-.1 1.3Z"/></svg>
             Enviar pedido por WhatsApp
@@ -116,7 +176,6 @@
         <h4>Explora</h4>
         <ul>
           <li><a href="catalogo.html">Catálogo</a></li>
-          <li><a href="personalizar.html">Personaliza tu ramo</a></li>
           <li><a href="carrito.html">Carrito</a></li>
           <li><a href="nosotros.html">Nosotros</a></li>
           <li><a href="contacto.html">Contacto</a></li>
@@ -150,9 +209,9 @@
     // Con file:// el navegador bloquea los módulos JS: avisar cómo abrir el sitio
     if (location.protocol === 'file:') {
       document.body.insertAdjacentHTML('afterbegin',
-        '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo, el personalizador y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
+        '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
     }
   </script>
-  <script type="module" src="js/main.js?v=3"></script>
+  <script type="module" src="js/main.js?v=6"></script>
 </body>
 </html>

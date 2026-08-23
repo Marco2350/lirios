@@ -13,10 +13,18 @@
   <link rel="icon" type="image/png" href="images/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800;1,700&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=14">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css?v=29">
 </head>
 <body>
+
+  <div class="announce-bar">
+    <div class="container announce-bar-inner">
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h3l3 3v4h-6z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg>Entrega el mismo día en El Progreso</span>
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a9.9 9.9 0 0 0-8.5 15.1L2 22l5-1.4A10 10 0 1 0 12 2Z"/></svg>Atención personalizada por WhatsApp</span>
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18M12 8v13M8 8a2.5 2.5 0 0 1 0-5c1.5 0 3 1.5 4 5 1-3.5 2.5-5 4-5a2.5 2.5 0 0 1 0 5"/></svg>Empaques de lujo y detalles que enamoran</span>
+    </div>
+  </div>
 
   <header class="site-header">
     <div class="container header-inner">
@@ -25,8 +33,10 @@
       </a>
       <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
         <a href="index.html">Inicio</a>
-        <a href="catalogo.html">Catálogo</a>
-        <a href="personalizar.html">Personalizar</a>
+        <details class="nav-dropdown">
+          <summary>Catálogo <span class="nav-dropdown-caret"></span></summary>
+          <div class="nav-dropdown-panel" id="nav-categorias-menu"></div>
+        </details>
         <a href="nosotros.html" aria-current="page">Nosotros</a>
         <a href="contacto.html">Contacto</a>
       </nav>
@@ -46,8 +56,8 @@
 
     <div class="page-head container">
       <span class="eyebrow">Nuestra historia</span>
-      <h1>El arte de las flores<br>en El Progreso.</h1>
-      <p>Somos una floristería artesanal en Plaza Rosamanda. Convertimos flores frescas en mensajes que se recuerdan.</p>
+      <h1>Una flor bendita,<br>una marca con propósito.</h1>
+      <p>Blanco y dorado, como el lirio que nos da el nombre. Así nació LIRIOS Floristería.</p>
     </div>
 
     <!-- Historia -->
@@ -57,10 +67,11 @@
           <img src="images/productos/jarron-coral.png" alt="Arreglo en jarrón blanco con gerberas coral y mini rosas" loading="lazy">
         </div>
         <div class="reveal">
-          <h2>Todo empezó con un ramo</h2>
-          <p class="muted">LIRIOS Floristería nació del gusto por regalar flores bien hechas: de esas que se preparan con calma, flor por flor, pensando en quién las va a recibir. Lo que empezó como encargos entre conocidos hoy es nuestro local en Plaza Rosamanda, sobre la salida hacia Santa Rita, en El Progreso, Yoro.</p>
-          <p class="muted">Cada mañana seleccionamos flores frescas y las trabajamos a mano: ramos, canastas, arreglos para fechas especiales y detalles de todos los días. Y como cada historia es distinta, también armamos ramos personalizados con las flores, colores y extras que tú elijas.</p>
-          <p class="muted">Estamos convencidos de algo muy simple: <em style="font-family: var(--font-display); font-size: 1.15em; color: var(--mostaza-dark)">una flor entregada a tiempo puede cambiarle el día a alguien.</em></p>
+          <h2>El origen del nombre</h2>
+          <p class="muted">LIRIOS Floristería nace del aroma y la elegancia del lirio: una flor blanca, fragante, con detalles dorados, que para nosotros es una flor bendita. Quisimos darle gracias a Dios con una flor bendita — y así surge nuestro nombre. Por eso nuestra marca viste blanco y dorado, los mismos colores del lirio.</p>
+          <h2>De la crisis a la oportunidad</h2>
+          <p class="muted">Nuestra historia empezó en casa, de la mano de Axel y Aldo, con el deseo de ofrecer calidad, elegancia y prestigio. En un momento de crisis, cuando otros solo vieron dificultad, nosotros — gracias a Dios — vimos una oportunidad. De ahí nació LIRIOS Floristería, el 6 de julio de 2024, en El Progreso, Yoro.</p>
+          <p class="muted">Nos caracteriza la originalidad: cada diseño, empaque y detalle nace de la creatividad de Axel y Aldo, sin copiar ni replicar el trabajo de nadie. Trabajamos siempre a la vanguardia, innovando en tendencias y en exclusividad, con un mismo objetivo desde el primer día: <em style="font-family: var(--font-display); font-size: 1.15em; color: var(--mostaza-dark)">garantizar calidad, frescura y un trato como el que a nosotros nos gustaría recibir.</em></p>
         </div>
       </div>
     </section>
@@ -138,7 +149,6 @@
         <h4>Explora</h4>
         <ul>
           <li><a href="catalogo.html">Catálogo</a></li>
-          <li><a href="personalizar.html">Personaliza tu ramo</a></li>
           <li><a href="carrito.html">Carrito</a></li>
           <li><a href="nosotros.html">Nosotros</a></li>
           <li><a href="contacto.html">Contacto</a></li>
@@ -172,9 +182,9 @@
     // Con file:// el navegador bloquea los módulos JS: avisar cómo abrir el sitio
     if (location.protocol === 'file:') {
       document.body.insertAdjacentHTML('afterbegin',
-        '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo, el personalizador y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
+        '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
     }
   </script>
-  <script type="module" src="js/main.js?v=3"></script>
+  <script type="module" src="js/main.js?v=6"></script>
 </body>
 </html>

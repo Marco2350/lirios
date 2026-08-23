@@ -13,10 +13,18 @@
   <link rel="icon" type="image/png" href="images/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800;1,700&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=14">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css?v=29">
 </head>
 <body>
+
+  <div class="announce-bar">
+    <div class="container announce-bar-inner">
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="7" width="15" height="10" rx="1"/><path d="M16 10h3l3 3v4h-6z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg>Entrega el mismo día en El Progreso</span>
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a9.9 9.9 0 0 0-8.5 15.1L2 22l5-1.4A10 10 0 1 0 12 2Z"/></svg>Atención personalizada por WhatsApp</span>
+      <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18M12 8v13M8 8a2.5 2.5 0 0 1 0-5c1.5 0 3 1.5 4 5 1-3.5 2.5-5 4-5a2.5 2.5 0 0 1 0 5"/></svg>Empaques de lujo y detalles que enamoran</span>
+    </div>
+  </div>
 
   <header class="site-header">
     <div class="container header-inner">
@@ -25,8 +33,10 @@
       </a>
       <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
         <a href="index.html">Inicio</a>
-        <a href="catalogo.html" aria-current="page">Catálogo</a>
-        <a href="personalizar.html">Personalizar</a>
+        <details class="nav-dropdown">
+          <summary>Catálogo <span class="nav-dropdown-caret"></span></summary>
+          <div class="nav-dropdown-panel" id="nav-categorias-menu"></div>
+        </details>
         <a href="nosotros.html">Nosotros</a>
         <a href="contacto.html">Contacto</a>
       </nav>
@@ -62,12 +72,6 @@
           <input type="search" id="search-input" placeholder="Nombre o flor (ej. rosas, girasoles...)">
         </div>
         <div class="filter-field">
-          <label for="filter-subcategoria">Subcategoría</label>
-          <select id="filter-subcategoria" disabled>
-            <option value="">Todas las subcategorías</option>
-          </select>
-        </div>
-        <div class="filter-field">
           <label for="sort-precio">Ordenar por</label>
           <select id="sort-precio">
             <option value="">Recomendados</option>
@@ -83,14 +87,6 @@
         <!-- Se llena en vivo desde /api/productos.php (MySQL) -->
       </div>
 
-    </section>
-
-    <section class="section cta-band">
-      <div class="container reveal">
-        <h2>¿Nada te convence del todo?</h2>
-        <p>Crea tu propio ramo: elige flor, color, tamaño y extras, con el precio calculado al instante.</p>
-        <a class="btn" href="personalizar.html">Crear mi ramo</a>
-      </div>
     </section>
 
   </main>
@@ -116,7 +112,6 @@
         <h4>Explora</h4>
         <ul>
           <li><a href="catalogo.html">Catálogo</a></li>
-          <li><a href="personalizar.html">Personaliza tu ramo</a></li>
           <li><a href="carrito.html">Carrito</a></li>
           <li><a href="nosotros.html">Nosotros</a></li>
           <li><a href="contacto.html">Contacto</a></li>
@@ -150,10 +145,10 @@
     // Con file:// el navegador bloquea los módulos JS: avisar cómo abrir el sitio
     if (location.protocol === 'file:') {
       document.body.insertAdjacentHTML('afterbegin',
-        '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo, el personalizador y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
+        '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
     }
   </script>
-  <script type="module" src="js/main.js?v=3"></script>
-  <script type="module" src="js/productos.js?v=9"></script>
+  <script type="module" src="js/main.js?v=6"></script>
+  <script type="module" src="js/productos.js?v=18"></script>
 </body>
 </html>

@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-card">
       <img src="../images/logo.png" alt="LIRIOS Floristería">
       <h1>Panel de administración</h1>
-      <p>Inicia sesión para gestionar el catálogo, los pedidos y la personalización de ramos.</p>
+      <p>Inicia sesión para gestionar el catálogo y los pedidos.</p>
       <?php if ($error): ?>
         <div class="flash error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
       <?php endif; ?>

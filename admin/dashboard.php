@@ -12,12 +12,6 @@ $totalDisponibles = (int) db()->query('SELECT COUNT(*) FROM productos WHERE disp
 $totalCategorias = (int) db()->query('SELECT COUNT(*) FROM categorias')->fetchColumn();
 $totalSubcategorias = (int) db()->query('SELECT COUNT(*) FROM subcategorias')->fetchColumn();
 
-$totalOpciones = (int) db()->query(
-    'SELECT (SELECT COUNT(*) FROM pers_flores) + (SELECT COUNT(*) FROM pers_colores)
-     + (SELECT COUNT(*) FROM pers_wraps) + (SELECT COUNT(*) FROM pers_ribbons)
-     + (SELECT COUNT(*) FROM pers_extras)'
-)->fetchColumn();
-
 $imagenes = is_dir(IMAGENES_DIR)
     ? glob(IMAGENES_DIR . '/*.{jpg,jpeg,png,webp}', GLOB_BRACE)
     : [];
@@ -39,7 +33,6 @@ $accesos = [
     ['reportes.php', 'reportes', 'Reportes', 'Ventas por día, semana y mes'],
     ['productos.php', 'productos', 'Productos', 'Catálogo, tallas y precios'],
     ['categorias.php', 'categorias', 'Categorías', 'Taxonomía del catálogo'],
-    ['personalizacion.php', 'personalizacion', 'Personalización', 'Flores, papeles, listones y extras'],
     ['subir-imagen.php', 'imagenes', 'Imágenes', 'Fotos disponibles para el catálogo'],
 ];
 
@@ -47,7 +40,7 @@ admin_header('Resumen general', 'dashboard.php');
 ?>
 
 <div class="dash-intro-row">
-  <p class="intro">Desde aquí administras el catálogo, las categorías, la personalización de ramos y las fotos del sitio. Cada cambio que guardes se publica de inmediato.</p>
+  <p class="intro">Desde aquí administras el catálogo, las categorías y las fotos del sitio. Cada cambio que guardes se publica de inmediato.</p>
   <?php if ($pedidosPendientes > 0): ?>
     <a href="pedidos.php" class="estado-pill alerta"><?= admin_icono('pedidos') ?> <?= $pedidosPendientes ?> <?= $pedidosPendientes === 1 ? 'pedido por coordinar' : 'pedidos por coordinar' ?></a>
   <?php else: ?>
@@ -97,11 +90,6 @@ admin_header('Resumen general', 'dashboard.php');
       <span class="kpi-icono salvia"><?= admin_icono('categorias') ?></span>
       <span class="num"><?= $totalCategorias ?> / <?= $totalSubcategorias ?></span>
       <span class="lbl">categorías / subcategorías</span>
-    </div>
-    <div class="kpi-tile">
-      <span class="kpi-icono azul"><?= admin_icono('personalizacion') ?></span>
-      <span class="num"><?= $totalOpciones ?></span>
-      <span class="lbl">opciones de personalización</span>
     </div>
     <div class="kpi-tile">
       <span class="kpi-icono terracota"><?= admin_icono('imagenes') ?></span>

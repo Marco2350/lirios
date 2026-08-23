@@ -162,6 +162,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($accion === 'guardar_rapido') {
+        $subcategoriaId = (int) ($_POST['subcategoria_id_rapido'] ?? 0);
+        $nombresPost = $_POST['nombre_rapido'] ?? [];
+        $preciosPost = $_POST['precio_rapido'] ?? [];
+        /* $_FILES para un input name="imagen_rapida[]" llega como arreglos
+           paralelos (['name'][i], ['tmp_name'][i], ['error'][i]...), no
+           como una lista de archivos — hay que reconstruir cada fila. */
+        $imagenesPost = $_FILES['imagen_rapida'] ?? null;
+
+        if ($subcategoriaId <= 0) {
+            flash('error', 'Elige una categoría/subcategoría para los productos de la carga rápida.');
+            header('Location: productos.php');
+            exit;
+        }
+
+        $filas = [];
+        $errores = [];
+        foreach ($nombresPost as $i => $nombreCrudo) {
+            $nombre = limpiar_texto((string) $nombreCrudo, 150);
+            $precio = limpiar_precio($preciosPost[$i] ?? '');
+            if ($nombre === '' && $precio <= 0) {
+                continue; // fila vacía, se ignora
+            }
+            if ($nombre === '' || $precio <= 0) {
+                $errores[] = 'Fila ' . ($i + 1) . ': falta el nombre o el precio.';
+                continue;
+            }
+
+            $rutaImagen = null;
+            if ($imagenesPost && ($imagenesPost['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $archivoFila = [
+                    'name' => $imagenesPost['name'][$i],
+                    'type' => $imagenesPost['type'][$i],
+                    'tmp_name' => $imagenesPost['tmp_name'][$i],
+                    'error' => $imagenesPost['error'][$i],
+                    'size' => $imagenesPost['size'][$i],
+                ];
+                $resultado = guardar_imagen_subida($archivoFila);
+                if ($resultado['ok']) {
+                    $rutaImagen = 'images/productos/' . $resultado['nombre'];
+                } else {
+                    $errores[] = 'Fila ' . ($i + 1) . ' (' . $nombre . '): ' . $resultado['error'];
+                    continue;
+                }
+            }
+
+            $filas[] = ['nombre' => $nombre, 'precio' => $precio, 'imagen' => $rutaImagen];
+        }
+
+        if ($errores) {
+            flash('error', implode(' ', $errores));
+        } elseif (!$filas) {
+            flash('error', 'Agrega al menos un producto con nombre y precio.');
+        } else {
+            db()->beginTransaction();
+            try {
+                $insertProducto = db()->prepare(
+                    'INSERT INTO productos (subcategoria_id, slug, nombre, descripcion_corta, imagen)
+                     VALUES (:sub, :slug, :nombre, :corta, :imagen)'
+                );
+                $insertVariante = db()->prepare(
+                    "INSERT INTO producto_variantes (producto_id, talla, precio, disponible, orden)
+                     VALUES (:pid, 'M', :precio, 1, 1)"
+                );
+                foreach ($filas as $fila) {
+                    $slug = slug_unico('productos', slugify($fila['nombre']));
+                    $insertProducto->execute([
+                        'sub' => $subcategoriaId, 'slug' => $slug,
+                        'nombre' => $fila['nombre'], 'corta' => $fila['nombre'],
+                        'imagen' => $fila['imagen'],
+                    ]);
+                    $insertVariante->execute(['pid' => (int) db()->lastInsertId(), 'precio' => $fila['precio']]);
+                }
+                db()->commit();
+                flash('ok', count($filas) . ' producto(s) agregados al catálogo. Puedes editarlos después para completar descripción, tallas adicionales o cambiar la foto.');
+            } catch (Throwable $e) {
+                db()->rollBack();
+                error_log('[lirios] Error en carga rápida de productos: ' . $e->getMessage());
+                flash('error', 'No se pudo guardar. Intenta de nuevo; si el problema continúa, contacta a soporte técnico.');
+            }
+        }
+        header('Location: productos.php');
+        exit;
+    }
+
     if ($accion === 'eliminar') {
         $id = (int) ($_POST['id'] ?? 0);
         db()->prepare('DELETE FROM productos WHERE id = ?')->execute([$id]);
@@ -306,6 +391,77 @@ admin_header('Productos del catálogo', 'productos.php');
     <?php endif; ?>
   </form>
 </div>
+
+<div class="panel">
+  <h2>Carga rápida (varios productos a la vez)</h2>
+  <p class="intro">Para cargar el catálogo rápido: elige una categoría/subcategoría (aplica a todas las filas) y escribe el nombre, precio y, si quieres, la foto de cada producto. Quedan publicados con talla única (M) — después puedes editarlos uno por uno para sumarles descripción y más tallas.</p>
+  <form method="post" action="productos.php" enctype="multipart/form-data">
+    <?= csrf_field() ?>
+    <input type="hidden" name="accion" value="guardar_rapido">
+
+    <div class="form-grid">
+      <div>
+        <label for="subcategoria_id_rapido">Categoría / Subcategoría (para todas las filas) *</label>
+        <select id="subcategoria_id_rapido" name="subcategoria_id_rapido" required>
+          <option value="">— Elegir —</option>
+          <?php foreach ($subcategoriasPorCategoria as $catNombre => $subs): ?>
+            <optgroup label="<?= e($catNombre) ?>">
+              <?php foreach ($subs as $s): ?>
+                <option value="<?= (int) $s['id'] ?>"><?= e($s['nombre']) ?></option>
+              <?php endforeach; ?>
+            </optgroup>
+          <?php endforeach; ?>
+        </select>
+      </div>
+    </div>
+
+    <div class="rapido-filas" id="rapido-filas">
+      <?php for ($i = 0; $i < 5; $i++): ?>
+        <div class="rapido-fila">
+          <input type="text" name="nombre_rapido[]" placeholder="Nombre del producto" maxlength="150">
+          <input type="number" name="precio_rapido[]" placeholder="Precio (L.)" min="0" step="0.01">
+          <input type="file" name="imagen_rapida[]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" title="Foto (opcional)">
+          <button type="button" class="btn mini secundario" data-quitar-fila aria-label="Quitar esta fila">✕</button>
+        </div>
+      <?php endfor; ?>
+    </div>
+
+    <button type="button" id="rapido-agregar-fila" class="btn mini secundario">+ Agregar fila</button>
+    <button type="submit" class="btn">Guardar todos</button>
+  </form>
+</div>
+
+<template id="rapido-fila-plantilla">
+  <div class="rapido-fila">
+    <input type="text" name="nombre_rapido[]" placeholder="Nombre del producto" maxlength="150">
+    <input type="number" name="precio_rapido[]" placeholder="Precio (L.)" min="0" step="0.01">
+    <input type="file" name="imagen_rapida[]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" title="Foto (opcional)">
+    <button type="button" class="btn mini secundario" data-quitar-fila aria-label="Quitar esta fila">✕</button>
+  </div>
+</template>
+
+<script>
+  (function () {
+    var lista = document.getElementById('rapido-filas');
+    var plantilla = document.getElementById('rapido-fila-plantilla');
+
+    document.getElementById('rapido-agregar-fila').addEventListener('click', function () {
+      lista.appendChild(plantilla.content.cloneNode(true));
+    });
+
+    lista.addEventListener('click', function (e) {
+      var boton = e.target.closest('[data-quitar-fila]');
+      if (!boton) return;
+      var fila = boton.closest('.rapido-fila');
+      var filas = lista.querySelectorAll('.rapido-fila');
+      if (filas.length > 1) {
+        fila.remove();
+      } else {
+        fila.querySelectorAll('input').forEach(function (input) { input.value = ''; });
+      }
+    });
+  })();
+</script>
 
 <div class="panel">
   <h2>Catálogo actual (<?= count($productos) ?>)</h2>

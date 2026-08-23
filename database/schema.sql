@@ -30,11 +30,12 @@
 -- ---------------------------------------------------------
 
 CREATE TABLE categorias (
-  id        INT AUTO_INCREMENT PRIMARY KEY,
-  slug      VARCHAR(60)  NOT NULL UNIQUE,
-  nombre    VARCHAR(100) NOT NULL,
-  icono     VARCHAR(10)  DEFAULT NULL,
-  orden     INT NOT NULL DEFAULT 0
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  slug            VARCHAR(60)  NOT NULL UNIQUE,
+  nombre          VARCHAR(150) NOT NULL,
+  icono           VARCHAR(10)  DEFAULT NULL,
+  imagen_portada  VARCHAR(255) DEFAULT NULL,
+  orden           INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE subcategorias (
@@ -82,54 +83,6 @@ CREATE TABLE producto_variantes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------
--- Opciones del personalizador de ramos
--- ---------------------------------------------------------
-
-CREATE TABLE pers_flores (
-  id      INT AUTO_INCREMENT PRIMARY KEY,
-  slug    VARCHAR(60) NOT NULL UNIQUE,
-  nombre  VARCHAR(100) NOT NULL,
-  precio  DECIMAL(10,2) NOT NULL DEFAULT 0,
-  kind    VARCHAR(30) NOT NULL DEFAULT 'rose',
-  orden   INT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE pers_colores (
-  id      INT AUTO_INCREMENT PRIMARY KEY,
-  slug    VARCHAR(60) NOT NULL UNIQUE,
-  nombre  VARCHAR(100) NOT NULL,
-  css     VARCHAR(150) NOT NULL,
-  orden   INT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE pers_wraps (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
-  slug         VARCHAR(60) NOT NULL UNIQUE,
-  nombre       VARCHAR(100) NOT NULL,
-  precio       DECIMAL(10,2) NOT NULL DEFAULT 0,
-  color        VARCHAR(20) NOT NULL DEFAULT '#CCCCCC',
-  descripcion  VARCHAR(150) DEFAULT '',
-  orden        INT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE pers_ribbons (
-  id      INT AUTO_INCREMENT PRIMARY KEY,
-  slug    VARCHAR(60) NOT NULL UNIQUE,
-  nombre  VARCHAR(100) NOT NULL,
-  precio  DECIMAL(10,2) NOT NULL DEFAULT 0,
-  color   VARCHAR(20) NOT NULL DEFAULT '#CCCCCC',
-  orden   INT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE pers_extras (
-  id      INT AUTO_INCREMENT PRIMARY KEY,
-  slug    VARCHAR(60) NOT NULL UNIQUE,
-  nombre  VARCHAR(100) NOT NULL,
-  precio  DECIMAL(10,2) NOT NULL DEFAULT 0,
-  orden   INT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ---------------------------------------------------------
 -- Pedidos enviados por WhatsApp (registrados desde /api/pedidos.php
 -- al hacer clic en "Enviar pedido por WhatsApp" en carrito.html).
 -- Alimentan la reportería de ventas del panel admin.
@@ -138,6 +91,13 @@ CREATE TABLE pers_extras (
 CREATE TABLE pedidos (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   cliente_nombre VARCHAR(150) DEFAULT NULL,
+  telefono       VARCHAR(30) DEFAULT NULL,
+  fecha_entrega  DATE DEFAULT NULL,
+  hora_entrega   VARCHAR(20) DEFAULT NULL,
+  tipo_entrega   VARCHAR(40) DEFAULT NULL,
+  direccion      VARCHAR(300) DEFAULT NULL,
+  dedicatoria    VARCHAR(300) DEFAULT NULL,
+  forma_pago     VARCHAR(100) DEFAULT NULL,
   nota           VARCHAR(500) DEFAULT NULL,
   ip             VARCHAR(45) DEFAULT NULL,
   estado         ENUM('pendiente','coordinado','entregado') NOT NULL DEFAULT 'pendiente',
@@ -168,19 +128,30 @@ CREATE INDEX idx_pedido_items_codigo ON pedido_items(codigo);
 -- Datos semilla — taxonomía (12 categorías del negocio)
 -- =========================================================
 
-INSERT INTO categorias (slug, nombre, icono, orden) VALUES
-  ('ramos-florales',          'Ramos Florales',          NULL, 1),
-  ('arreglos-en-base',        'Arreglos en Base',        NULL, 2),
-  ('regalos-y-complementos',  'Regalos y Complementos',  NULL, 3),
-  ('cumpleanos',              'Cumpleaños',               NULL, 4),
-  ('amor-y-romance',          'Amor y Romance',          NULL, 5),
-  ('graduaciones',            'Graduaciones',             NULL, 6),
-  ('condolencias',            'Condolencias',             NULL, 7),
-  ('bodas-y-eventos',         'Bodas y Eventos',          NULL, 8),
-  ('caballero',               'Caballero',                NULL, 9),
-  ('globos',                  'Globos',                   NULL, 10),
-  ('infantil',                'Infantil',                 NULL, 11),
-  ('peluches',                'Peluches',                 NULL, 12);
+-- Taxonomía vigente desde 2026-08-21: 14 categorías pedidas por la clienta,
+-- cada una pensada como página propia con portada distinta (imagen_portada).
+-- 'amor-y-romance' y 'peluches' quedaron huérfanas de esta lista (no se
+-- borraron por si tienen productos asociados) — no aparecen en la grilla de
+-- categorías del sitio hasta que se decida fusionarlas o retirarlas.
+-- 'arreglos-florales' se creó el 2026-08-21 y se retiró el mismo día a
+-- pedido de la clienta ("no, porque todos son arreglos florales" — es
+-- redundante como categoría, no aporta nada que no diga ya cada producto).
+INSERT INTO categorias (slug, nombre, icono, imagen_portada, orden) VALUES
+  ('ramos-florales',                    'Ramos Florales',                NULL, 'images/categorias/ramos-florales.webp',                    1),
+  ('arreglos-en-base',                  'Arreglos en Base',              NULL, 'images/categorias/arreglos-en-base.webp',                  2),
+  ('cumpleanos',                        'Arreglos Cumpleaños',           NULL, 'images/categorias/cumpleanos.webp',                        3),
+  ('caballero',                         'Arreglos para Caballero',       NULL, NULL,                                                        4),
+  ('infantil',                          'Arreglos Infantiles',           NULL, 'images/categorias/infantil.webp',                          5),
+  ('desayuno-sorpresa',                 'Desayuno Sorpresa',             NULL, 'images/categorias/desayuno-sorpresa.webp',                 6),
+  ('aniversario',                       'Aniversario',                   NULL, 'images/categorias/aniversario.webp',                       7),
+  ('chocolates-perfumes-complementos',  'Complementos',                  NULL, 'images/categorias/chocolates-perfumes-complementos.webp',  8),
+  ('graduaciones',                      'Arreglos de Graduación',        NULL, 'images/categorias/graduaciones.webp',                      9),
+  ('bodas',                             'Arreglos para Bodas',           NULL, NULL,                                                        10),
+  ('funebres',                          'Arreglos Fúnebres',             NULL, 'images/categorias/funebres.webp',                          11),
+  ('flores-preservadas',                'Arreglos con Flores Preservadas', NULL, NULL,                                                      12),
+  ('globos',                            'Globos',                        NULL, 'images/categorias/globos.webp',                            13),
+  ('amor-y-romance',                    'Amor y Romance',                NULL, NULL,                                                        90),
+  ('peluches',                          'Peluches',                      NULL, NULL,                                                        91);
 
 INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
   -- 1. Ramos Florales
@@ -202,14 +173,14 @@ INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
   ((SELECT id FROM categorias WHERE slug='arreglos-en-base'), 'canastas',        'Canastas',        6),
 
   -- 3. Regalos y Complementos
-  ((SELECT id FROM categorias WHERE slug='regalos-y-complementos'), 'chocolates',     'Chocolates',     1),
-  ((SELECT id FROM categorias WHERE slug='regalos-y-complementos'), 'perfumes',       'Perfumes',       2),
-  ((SELECT id FROM categorias WHERE slug='regalos-y-complementos'), 'vinos-y-whisky', 'Vinos y Whisky', 3),
-  ((SELECT id FROM categorias WHERE slug='regalos-y-complementos'), 'tazas',          'Tazas',          4),
-  ((SELECT id FROM categorias WHERE slug='regalos-y-complementos'), 'stanley',        'Stanley',        5),
-  ((SELECT id FROM categorias WHERE slug='regalos-y-complementos'), 'agendas',        'Agendas',        6),
-  ((SELECT id FROM categorias WHERE slug='regalos-y-complementos'), 'globos',         'Globos',         7),
-  ((SELECT id FROM categorias WHERE slug='regalos-y-complementos'), 'tarjetas',       'Tarjetas',       8),
+  ((SELECT id FROM categorias WHERE slug='chocolates-perfumes-complementos'), 'chocolates',     'Chocolates',     1),
+  ((SELECT id FROM categorias WHERE slug='chocolates-perfumes-complementos'), 'perfumes',       'Perfumes',       2),
+  ((SELECT id FROM categorias WHERE slug='chocolates-perfumes-complementos'), 'vinos-y-whisky', 'Vinos y Whisky', 3),
+  ((SELECT id FROM categorias WHERE slug='chocolates-perfumes-complementos'), 'tazas',          'Tazas',          4),
+  ((SELECT id FROM categorias WHERE slug='chocolates-perfumes-complementos'), 'stanley',        'Stanley',        5),
+  ((SELECT id FROM categorias WHERE slug='chocolates-perfumes-complementos'), 'agendas',        'Agendas',        6),
+  ((SELECT id FROM categorias WHERE slug='chocolates-perfumes-complementos'), 'globos',         'Globos',         7),
+  ((SELECT id FROM categorias WHERE slug='chocolates-perfumes-complementos'), 'tarjetas',       'Tarjetas',       8),
 
   -- 4. Cumpleaños
   ((SELECT id FROM categorias WHERE slug='cumpleanos'), 'para-ella',      'Para ella',       1),
@@ -236,19 +207,19 @@ INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
   ((SELECT id FROM categorias WHERE slug='graduaciones'), 'personalizados', 'Personalizados', 6),
 
   -- 7. Condolencias
-  ((SELECT id FROM categorias WHERE slug='condolencias'), 'coronas',            'Coronas',             1),
-  ((SELECT id FROM categorias WHERE slug='condolencias'), 'cruces',             'Cruces',              2),
-  ((SELECT id FROM categorias WHERE slug='condolencias'), 'corazones',          'Corazones',           3),
-  ((SELECT id FROM categorias WHERE slug='condolencias'), 'arreglos-verticales','Arreglos verticales', 4),
-  ((SELECT id FROM categorias WHERE slug='condolencias'), 'ramos-funebres',     'Ramos fúnebres',      5),
+  ((SELECT id FROM categorias WHERE slug='funebres'), 'coronas',            'Coronas',             1),
+  ((SELECT id FROM categorias WHERE slug='funebres'), 'cruces',             'Cruces',              2),
+  ((SELECT id FROM categorias WHERE slug='funebres'), 'corazones',          'Corazones',           3),
+  ((SELECT id FROM categorias WHERE slug='funebres'), 'arreglos-verticales','Arreglos verticales', 4),
+  ((SELECT id FROM categorias WHERE slug='funebres'), 'ramos-funebres',     'Ramos fúnebres',      5),
 
   -- 8. Bodas y Eventos
-  ((SELECT id FROM categorias WHERE slug='bodas-y-eventos'), 'ramos-de-novia',    'Ramos de novia',     1),
-  ((SELECT id FROM categorias WHERE slug='bodas-y-eventos'), 'boutonnieres',      'Boutonnières',       2),
-  ((SELECT id FROM categorias WHERE slug='bodas-y-eventos'), 'centros-de-mesa',   'Centros de mesa',    3),
-  ((SELECT id FROM categorias WHERE slug='bodas-y-eventos'), 'decoracion-floral', 'Decoración floral',  4),
-  ((SELECT id FROM categorias WHERE slug='bodas-y-eventos'), 'iglesias',          'Iglesias',           5),
-  ((SELECT id FROM categorias WHERE slug='bodas-y-eventos'), 'recepciones',      'Recepciones',        6),
+  ((SELECT id FROM categorias WHERE slug='bodas'), 'ramos-de-novia',    'Ramos de novia',     1),
+  ((SELECT id FROM categorias WHERE slug='bodas'), 'boutonnieres',      'Boutonnières',       2),
+  ((SELECT id FROM categorias WHERE slug='bodas'), 'centros-de-mesa',   'Centros de mesa',    3),
+  ((SELECT id FROM categorias WHERE slug='bodas'), 'decoracion-floral', 'Decoración floral',  4),
+  ((SELECT id FROM categorias WHERE slug='bodas'), 'iglesias',          'Iglesias',           5),
+  ((SELECT id FROM categorias WHERE slug='bodas'), 'recepciones',      'Recepciones',        6),
 
   -- 9. Caballero
   ((SELECT id FROM categorias WHERE slug='caballero'), 'whisky',             'Whisky',             1),
@@ -281,7 +252,22 @@ INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
   ((SELECT id FROM categorias WHERE slug='peluches'), 'capibara',     'Capibara',     3),
   ((SELECT id FROM categorias WHERE slug='peluches'), 'personajes',   'Personajes',   4),
   ((SELECT id FROM categorias WHERE slug='peluches'), 'gigantes',     'Gigantes',     5),
-  ((SELECT id FROM categorias WHERE slug='peluches'), 'mini-peluches','Mini peluches',6);
+  ((SELECT id FROM categorias WHERE slug='peluches'), 'mini-peluches','Mini peluches',6),
+
+  -- 14. Desayuno Sorpresa (categoría nueva 2026-08-21)
+  ((SELECT id FROM categorias WHERE slug='desayuno-sorpresa'), 'clasico',      'Clásico',       1),
+  ((SELECT id FROM categorias WHERE slug='desayuno-sorpresa'), 'con-pastel',   'Con pastel',    2),
+  ((SELECT id FROM categorias WHERE slug='desayuno-sorpresa'), 'con-globos',   'Con globos',    3),
+
+  -- 15. Aniversario (categoría nueva 2026-08-21; separada de la vieja "Amor y Romance")
+  ((SELECT id FROM categorias WHERE slug='aniversario'), 'ramos',        'Ramos',         1),
+  ((SELECT id FROM categorias WHERE slug='aniversario'), 'con-detalles', 'Con detalles',  2),
+  ((SELECT id FROM categorias WHERE slug='aniversario'), 'bodas-de-oro', 'Bodas de oro',  3),
+
+  -- 16. Arreglos con Flores Preservadas (categoría nueva 2026-08-21)
+  ((SELECT id FROM categorias WHERE slug='flores-preservadas'), 'cajas',    'Cajas',    1),
+  ((SELECT id FROM categorias WHERE slug='flores-preservadas'), 'cupulas',  'Cúpulas',  2),
+  ((SELECT id FROM categorias WHERE slug='flores-preservadas'), 'marcos',   'Marcos',   3);
 
 -- =========================================================
 -- Catálogo de productos: SIN datos semilla a propósito.
@@ -295,51 +281,6 @@ INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
 -- final — ver CLAUDE.md sección 9, pendiente "Catálogo real de
 -- productos".
 -- =========================================================
-
--- =========================================================
--- Datos semilla — opciones del personalizador
--- (migrado de data/opciones-personalizacion.json)
--- =========================================================
-
-INSERT INTO pers_flores (slug, nombre, precio, kind, orden) VALUES
-  ('rosas',       'Rosas',       450, 'rose',      1),
-  ('girasoles',   'Girasoles',   400, 'sunflower', 2),
-  ('lirios',      'Lirios',      500, 'lily',      3),
-  ('gerberas',    'Gerberas',    380, 'gerbera',   4),
-  ('tulipanes',   'Tulipanes',   650, 'tulip',     5),
-  ('claveles',    'Claveles',    300, 'carnation', 6),
-  ('margaritas',  'Margaritas',  320, 'daisy',     7),
-  ('astromelias', 'Astromelias', 350, 'aster',     8),
-  ('mixto',       'Ramo mixto',  480, 'mixed',     9);
-
-INSERT INTO pers_colores (slug, nombre, css, orden) VALUES
-  ('rojo',     'Rojo',     '#B3261E', 1),
-  ('rosado',   'Rosado',   '#E88BAD', 2),
-  ('blanco',   'Blanco',   '#F5EFE6', 3),
-  ('amarillo', 'Amarillo', '#E7C544', 4),
-  ('lila',     'Lila',     '#B497D6', 5),
-  ('naranja',  'Naranja',  '#E8894A', 6),
-  ('mixto',    'Mixto',    'linear-gradient(135deg, #B3261E 0%, #E7C544 50%, #B497D6 100%)', 7);
-
-INSERT INTO pers_wraps (slug, nombre, precio, color, descripcion, orden) VALUES
-  ('kraft',   'Papel Kraft Natural',     60, '#d2b48c', 'Textura natural y rústica', 1),
-  ('blanco',  'Papel Blanco Texturizado', 80, '#f5f0e6', 'Elegante y limpio',        2),
-  ('rosado',  'Papel Rosado Suave',       75, '#f8d7d7', 'Romántico y delicado',     3),
-  ('verde',   'Papel Verde Salvia',       70, '#a8b5a0', 'Fresco y moderno',         4);
-
-INSERT INTO pers_ribbons (slug, nombre, precio, color, orden) VALUES
-  ('dorado',  'Listón Dorado',           45, '#C8860B', 1),
-  ('rosado',  'Listón Rosado',           40, '#E88BAD', 2),
-  ('blanco',  'Listón Blanco',           35, '#f5f0e6', 3),
-  ('verde',   'Listón Verde',            40, '#5a7a5a', 4),
-  ('negro',   'Listón Negro Elegante',   50, '#2B2118', 5);
-
-INSERT INTO pers_extras (slug, nombre, precio, orden) VALUES
-  ('chocolates', 'Chocolates',             120, 1),
-  ('peluche',    'Peluche pequeño',        200, 2),
-  ('globo',      'Globo metálico',          80, 3),
-  ('tarjeta',    'Tarjeta con dedicatoria',  30, 4),
-  ('florero',    'Florero de vidrio',      150, 5);
 
 -- ---------------------------------------------------------
 -- Intentos de acceso al panel admin (freno a fuerza bruta en el login)

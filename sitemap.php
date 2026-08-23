@@ -15,7 +15,7 @@ require_once __DIR__ . '/config/db.php';
 $esquema = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $base = $esquema . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
 
-$paginas = ['/', '/catalogo.html', '/personalizar.html', '/nosotros.html', '/contacto.html', '/politica-privacidad.html', '/terminos-condiciones.html'];
+$paginas = ['/', '/catalogo.html', '/nosotros.html', '/contacto.html', '/politica-privacidad.html', '/terminos-condiciones.html'];
 
 try {
     $productos = db()->query('SELECT slug FROM productos WHERE disponible = 1')->fetchAll();

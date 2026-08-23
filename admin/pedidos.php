@@ -76,7 +76,15 @@ admin_header('Pedidos', 'pedidos.php');
               <td style="white-space:nowrap"><?= e(date('d/m/Y H:i', strtotime($p['creado_en']))) ?></td>
               <td>
                 <?= e($p['cliente_nombre'] ?: '— sin nombre —') ?>
-                <?php if ($p['nota']): ?><br><small class="muted"><?= e($p['nota']) ?></small><?php endif; ?>
+                <?php if ($p['telefono']): ?><br><small class="muted">📱 <?= e($p['telefono']) ?></small><?php endif; ?>
+                <?php if ($p['fecha_entrega'] || $p['hora_entrega']): ?>
+                  <br><small class="muted">📅 <?= $p['fecha_entrega'] ? e(date('d/m/Y', strtotime($p['fecha_entrega']))) : '__' ?> · <?= e($p['hora_entrega'] ?: '__') ?></small>
+                <?php endif; ?>
+                <?php if ($p['tipo_entrega']): ?><br><small class="muted">🚚 <?= e($p['tipo_entrega']) ?></small><?php endif; ?>
+                <?php if ($p['direccion']): ?><br><small class="muted">📍 <?= e($p['direccion']) ?></small><?php endif; ?>
+                <?php if ($p['dedicatoria']): ?><br><small class="muted">💌 <?= e($p['dedicatoria']) ?></small><?php endif; ?>
+                <?php if ($p['forma_pago']): ?><br><small class="muted">💳 <?= e($p['forma_pago']) ?></small><?php endif; ?>
+                <?php if ($p['nota']): ?><br><small class="muted">📝 <?= e($p['nota']) ?></small><?php endif; ?>
               </td>
               <td>
                 <details>

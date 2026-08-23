@@ -9,9 +9,10 @@ Este archivo es la guía de proyecto para Claude Code. Léelo completo antes de 
 Sitio web para **Lirios Floristería**, negocio ubicado en El Progreso, Yoro, Honduras. El objetivo principal es que el cliente pueda:
 
 1. Ver el catálogo de arreglos/ramos.
-2. **Personalizar un ramo** eligiendo flores, colores, tamaño y extras.
-3. Agregar productos (normales o personalizados) a un **carrito**.
-4. **Compartir el pedido por WhatsApp** con el detalle de productos y el precio total, para cerrar la venta por chat (no hay pasarela de pago en línea — el pago se coordina directamente con la floristería).
+2. Agregar productos a un **carrito**.
+3. **Compartir el pedido por WhatsApp** con el detalle de productos y el precio total, para cerrar la venta por chat (no hay pasarela de pago en línea — el pago se coordina directamente con la floristería).
+
+> **Nota (2026-08-22):** el sitio tuvo en algún momento un constructor de "ramo personalizado" (`/personalizar.html`, tablas `pers_*`, panel `/admin/personalizacion.php`) — la clienta pidió eliminarlo por completo ("ya no me interesa hacer eso"). Se borraron la página, su JS, el endpoint de API, la pantalla de admin, las tablas `pers_*` (en el schema y en la base remota, con backup previo en `database/backups/`) y todas las referencias de navegación/footer/CTA en el sitio y el panel. El carrito y `pedido_items` conservan el campo `tipo` (`'producto'|'personalizado'`) sin tocar — es solo metadata histórica para pedidos ya recibidos antes de la eliminación, no se usa para nada nuevo.
 
 No se requiere backend de pagos ni checkout tradicional. El "checkout" real es un mensaje de WhatsApp pre-llenado.
 
@@ -40,47 +41,13 @@ No se requiere backend de pagos ni checkout tradicional. El "checkout" real es u
 
 ## 3. Paleta de colores
 
-**Botón primario aligerado (2026-08-13):** el relleno de `.btn` (`css/styles.css`) pasó de la textura foil completa (`--gold-brushed` + `--gold-shine` de 6 paradas, animada 240% en el hover) a un relleno plano en `--mostaza-light` con un barniz sutil de dos paradas (`linear-gradient(180deg, rgba(255,255,255,.4), transparent 55%)`) — la clienta la sintió "pesada" para un botón chico. El hover pasa a `--mostaza` sólido. `--gold-shine`/`--gold-brushed` se mantienen para superficies grandes donde sí se ven bien (acento del hero `.hero-carousel::before`, sello giratorio `.hero-badge`) — la textura no se quitó del sitio, solo de los botones.
-
-**Rediseño 2026-08-05 (iteración 4): dorado con textura.** Tras tres iteraciones el 2026-08-02 (blanco+verde salvia → dorado elegante → de vuelta a verde salvia, ver historial abajo), la clienta pidió pasar definitivamente a **dorado antiguo con textura tipo foil metálico** en vez de un relleno plano, reemplazando el verde. Se retomaron exactamente los valores del dorado ya validado el 2026-08-02 (`#B8933E` / `#8F6F2C` / `#D9C08A` sobre fondo cálido `#FAF6EC` y texto `#241F17`) en vez de inventar un dorado nuevo. La "textura" se resuelve 100% con CSS (sin imágenes ni CDNs): dos variables nuevas en `:root` de ambos CSS —`--gold-shine` (degradado multi-stop que simula el brillo/sheen de una lámina metálica) y `--gold-brushed` (veta fina con `repeating-linear-gradient`)— se combinan como múltiples `background-image` sobre el botón primario (`.btn` en `css/styles.css`) y el acorde decorativo del hero (`.hero-carousel::before`), con una transición de `background-position` en el hover del botón para un barrido de brillo sutil. El resto de superficies doradas (badges, píldoras de estado en el panel admin) se quedaron con relleno plano a propósito — la textura se reserva para las superficies de marca más visibles, no para cada elemento pequeño.
-
-**Historial de iteraciones del 2026-08-02 (mismo día).** La clienta pidió primero quitar el tono amarillento del sitio y llevarlo a blanco con combinaciones más limpias y elegantes → se probó **blanco + verde salvia/botánico**. Horas después pidió un dorado "elegante y minimalista" (no el mostaza plano original) → se probó **blanco + dorado antiguo/champán**. Poco después pidió volver al verde → quedó en **blanco + verde salvia/botánico** hasta el rediseño del 2026-08-05 de arriba, que retomó ese mismo dorado.
-
-Los **nombres de las variables CSS no cambiaron** en ninguna iteración (`--mostaza`, `--mostaza-dark`, `--mostaza-light`, `--crema`, `--crema-suave`, `--carbon`, `--gris-calido`, todas en `:root` de `css/styles.css` y `css/admin.css`) — solo sus valores hex — para no tener que tocar las cientos de referencias `var(--mostaza)` etc. repartidas por todo el sitio y el panel admin. Si se vuelve a tocar esta paleta, es más simple seguir reasignando estos mismos nombres que renombrarlos (y conviene buscar/reemplazar por valor hex exacto, no solo por nombre de variable — hay bastantes hex hardcodeados fuera de `:root`, sobre todo en el SVG del personalizador y en las tarjetas de flores/wraps/ribbons del personalizador, que también se migraron al dorado el 2026-08-05).
-
-| Uso | Nombre (variable) | Hex |
-|---|---|---|
-| Primario (marca) | `mostaza` | `#B8933E` (dorado antiguo) |
-| Primario hover/dark | `mostaza-dark` | `#8F6F2C` |
-| Primario claro (fondos suaves, badges) | `mostaza-light` | `#D9C08A` |
-| Fondo general | `crema` | `#FAF6EC` |
-| Fondo secundario / cards | `crema-suave` | `#F1E9D6` |
-| Texto principal | `carbon` | `#241F17` |
-| Texto secundario / gris cálido | `gris-calido` | `#726A57` |
-| Blanco | `blanco` | `#FFFFFF` |
-| Éxito (agregado al carrito, WhatsApp) | `whatsapp-green` | `#25D366` (definida pero no usada en UI, ver nota abajo) |
-
-**Nota — sin verde de WhatsApp en la UI:** aunque `--whatsapp-green` sigue en `:root`, la clienta pidió no usarlo visualmente (desentonaba con la paleta). Los CTAs de WhatsApp (`.btn-whatsapp`, `.wa-fab`) van en `--carbon` con hover `--mostaza-dark` — el tono exacto de ese hover cambia cada vez que se retoca la paleta, pero la regla en sí (nunca `--whatsapp-green`) sigue vigente.
-
-**Qué NO se tocó en ningún rediseño de paleta:** los colores hardcodeados que representan flores/papeles reales (ej. el amarillo del girasol en la ilustración SVG del personalizador, el listón "Dorado" en `pers_ribbons`) son contenido del catálogo, no color de marca — se dejaron intactos a propósito. Tampoco se tocaron los colores semánticos de éxito/error (`--exito-bg`/`--exito-texto` en verde, `--error`/`--error-bg` en rojo, en ambos CSS) ni los acentos de variedad de las tarjetas KPI del dashboard admin (`.kpi-icono.azul`, `.kpi-icono.terracota`) — significan "aprobado"/"rechazado"/variedad visual, no son el color de marca, así que no cambian con el verde→dorado.
-
-**Logo del footer (2026-08-02):** el footer tiene fondo oscuro (`--carbon`); usa `images/Logo_Negativo.png` (versión clara del logo, ya existía en `/images` junto a `Logo_Positivo.png` sin usar) directo sobre el fondo, sin caja blanca de contraste. El logo del header (fondo claro) sigue usando `images/logo.png` normal.
-
-**Tipografía (actualizado 2026-07-25):** inspirada en el análisis tipográfico real de stampahn.com (theme Shopify) — **DM Sans** (pesos 500/700/800, con itálica) para títulos, navegación, botones y toda etiqueta/UI, y **Arimo** (400/700, con itálica) para el texto de cuerpo, ambas desde Google Fonts. Variables en `css/styles.css`: `--font-display: "DM Sans", ...` y `--font-body: "Arimo", ...`. Se descartaron las fuentes anteriores (Cormorant Garamond + Inter) a favor de un carácter más audaz y gráfico, manteniendo intacta la paleta mostaza/crema de la sección 3.
-
-**Firma visual — cápsula "eyebrow" (actualizado 2026-07-25):** cada sección del sitio antecede su título con un pequeño badge en cápsula (fondo `--carbon`, texto `--mostaza-light`, mayúsculas, tracking amplio, punto decorativo) — clase `.eyebrow` en `styles.css`. Es la adaptación en la paleta de Lirios del lenguaje de badges oscuros y bloques de color audaces de stampahn.com. En el hero de `index.html` además hay un acorde orgánico (forma de pétalo) en degradado mostaza detrás del carrusel de fotos (`.hero-carousel::before`) — la versión floral de esos bloques de color, en vez de copiar literalmente sus formas geométricas deportivas.
-
-**Refresco del hero (2026-08-13):** mismo esqueleto y carrusel 3D de siempre (JS de `js/carousel.js` sin tocar), pero con un tratamiento más bold/editorial para que combine con el rediseño de tarjetas de producto del mismo día (mayúsculas, precio en peso normal, ver §6.1):
-  - El sello circular giratorio (`.hero-badge`) pasó de disco blanco translúcido con texto mostaza a un sello sólido con la misma textura foil (`--gold-shine`/`--gold-brushed`) del botón primario y texto/ícono en `--carbon` — más peso y contraste.
-  - La etiqueta del carrusel (`.carousel-tag`, nombre + precio sobre la foto activa) pasó de pill blanco tipo glass a un sello sólido `--carbon` con el nombre en mayúsculas — el mismo lenguaje que ya llevan las tarjetas del catálogo.
-  - La franja de confianza bajo los botones (`.hero-trust`, antes 3 pares punto+texto sueltos) ahora es una franja con regla superior y divisores verticales entre ítems, en mayúsculas tracked — más gráfica, sin los puntos (`.trust-dot` queda oculta con `display:none`, no se tocó el HTML).
-  - **Bug de paleta encontrado de paso:** aparecieron dos rastros de `rgba(199, 211, 187, …)` — un verde salvia que quedó del rediseño de paleta previo al dorado definitivo del 2026-08-05 y nunca se migró (vivían fuera de `:root` y se escaparon del find/replace por hex de esa fecha): los dos `radial-gradient` del fondo de `.hero` (reemplazados por tonos cálidos de `--mostaza`/`--mostaza-light`, más una veta diagonal muy tenue `rgba(36,31,23,0.015)` para textura de fondo) y el `border-color` de `.site-footer .social-icons a` (reemplazado por `rgba(217, 192, 138, 0.4)`, el mismo mostaza-light). Se grepeó `199, 211, 187` en todo el repo tras el fix y ya no queda ningún otro rastro. Si se vuelve a tocar la paleta, repetir ese grep por si aparece en algún archivo que no se tocó hoy.
+Nombres de variable y valores hex vigentes: ver tabla en `css/CLAUDE.md`. Ese archivo también documenta el historial completo de rediseños (por qué dorado y no verde salvia, el bug de paleta del 2026-08-13, etc.) — se carga solo al trabajar dentro de `css/`, no en cada sesión.
 
 ---
 
 ## 4. Stack tecnológico elegido
 
-Decisión del cliente: **sin frameworks JS, sin build step, hosting compartido tipo cPanel, y con un panel de administración en PHP para que el catálogo, la taxonomía de categorías y las opciones de personalización se editen sin tocar código.** El sitio debe funcionar subiendo los archivos tal cual por FTP/Administrador de Archivos de cPanel — nada de `npm run build`, nada de Node en el servidor.
+Decisión del cliente: **sin frameworks JS, sin build step, hosting compartido tipo cPanel, y con un panel de administración en PHP para que el catálogo y la taxonomía de categorías se editen sin tocar código.** El sitio debe funcionar subiendo los archivos tal cual por FTP/Administrador de Archivos de cPanel — nada de `npm run build`, nada de Node en el servidor.
 
 > **Actualización de arquitectura (2026-07-25):** el catálogo creció de un puñado de productos a una taxonomía de 12 categorías con ~80 subcategorías, tallas con precio propio (S/M/L/XL) y campos adicionales por producto (descripción corta, "incluye", disponibilidad de entrega/retiro). Con ese volumen y esa normalización, se reemplazó el almacenamiento en archivos JSON por una **base de datos MySQL normalizada**, consultada **en vivo** (sin caché intermedia) tanto desde el sitio público como desde el panel admin — ver detalle abajo. La decisión de "sin frameworks / sin build step" para el front-end se mantiene: HTML + CSS + JS vanilla sin cambios; lo único que cambió es de dónde viene el dato.
 
@@ -90,10 +57,10 @@ Decisión del cliente: **sin frameworks JS, sin build step, hosting compartido t
 |---|---|---|
 | Estructura | **HTML5 puro**, un archivo `.html` por página (multi-page, no SPA) | Compatible 100% con hosting compartido, cada página es indexable por Google (mejor SEO que una SPA), no requiere servidor Node |
 | Estilos | **CSS puro** con variables CSS (`:root { --mostaza: #C8860B; ... }`) en `styles.css` | Control total, cero dependencias externas, carga rápida, sin build tools |
-| Interactividad / carrito | **JavaScript vanilla (ES6+)**, sin frameworks | Cubre carrito, personalizador y generación del mensaje de WhatsApp sin compilar nada |
+| Interactividad / carrito | **JavaScript vanilla (ES6+)**, sin frameworks | Cubre carrito y generación del mensaje de WhatsApp sin compilar nada |
 | Persistencia del carrito | **`localStorage`** del navegador (JS nativo) | El carrito sobrevive recargas de página sin backend |
-| Catálogo, taxonomía de categorías y opciones de personalización | **Base de datos MySQL normalizada** (`database/schema.sql`), consultada en vivo mediante **PHP 8.2 + PDO** desde `/api/*.php` (sitio público) y directamente desde `/admin` | Con 12 categorías, ~80 subcategorías, tallas con precio propio por producto y decenas de opciones de personalización, un modelo relacional evita duplicación e inconsistencias que un JSON plano ya no podía sostener con orden |
-| Panel de administración | **PHP puro** (sin frameworks tipo Laravel), autenticación simple por sesión + contraseña, lee/escribe directamente en MySQL vía PDO (`config/db.php`) | Prácticamente todo hosting compartido con cPanel incluye PHP + MySQL/MariaDB de forma nativa y gratuita; el panel edita catálogo, categorías/subcategorías y personalización sin tocar código |
+| Catálogo y taxonomía de categorías | **Base de datos MySQL normalizada** (`database/schema.sql`), consultada en vivo mediante **PHP 8.2 + PDO** desde `/api/*.php` (sitio público) y directamente desde `/admin` | Con 12 categorías, ~80 subcategorías y tallas con precio propio por producto, un modelo relacional evita duplicación e inconsistencias que un JSON plano ya no podía sostener con orden |
+| Panel de administración | **PHP puro** (sin frameworks tipo Laravel), autenticación simple por sesión + contraseña, lee/escribe directamente en MySQL vía PDO (`config/db.php`) | Prácticamente todo hosting compartido con cPanel incluye PHP + MySQL/MariaDB de forma nativa y gratuita; el panel edita catálogo y categorías/subcategorías sin tocar código |
 | Imágenes | Carpeta `/images` con archivos ya optimizados (WebP cuando sea posible); subida de imágenes también desde el panel admin | No hay optimización automática al no usar frameworks, deben subirse ya comprimidas |
 | Mapa de ubicación | **Google Maps Embed** (iframe, sin API key) | Gratis, funciona en HTML plano |
 | Integración WhatsApp | **Deep link `https://wa.me/<numero>?text=<mensaje-codificado>`** generado con JS puro (`encodeURIComponent`) | No requiere API de WhatsApp Business, cero costo |
@@ -101,23 +68,7 @@ Decisión del cliente: **sin frameworks JS, sin build step, hosting compartido t
 | Hosting | **Cualquier hosting compartido con PHP** (cPanel), dominio `.hn`, `.com` o el que elijan | Portabilidad total; el cliente decide después dónde y con qué dominio publicar |
 | Formularios (contacto, si aplica) | Envío directo a WhatsApp o `mailto:`, o un pequeño script PHP de envío de correo si se desea más adelante | PHP ya está disponible por el panel admin, así que esto es trivial de agregar |
 
-**Nota:** el front-end del sitio público sigue siendo HTML + CSS + JS vanilla, sin build step. Las páginas de catálogo/producto/personalizar consultan el dato mediante `fetch()` a pequeños endpoints PHP en `/api/*.php`, que a su vez leen MySQL en cada solicitud (sin caché intermedia) — por eso el catálogo se actualiza al instante apenas se guarda algo en `/admin`. `/admin` usa PHP + PDO directamente contra la misma base de datos.
-
----
-
-## 5. Estructura de páginas
-
-```
-/                     → Home (hero, categorías destacadas, sobre nosotros breve, CTA a catálogo)
-/catalogo             → Grid de productos con filtros (categoría, subcategoría, precio)
-/producto/[slug]      → Detalle de producto + opción "agregar al carrito"
-/personalizar         → Constructor de ramo personalizado (ver sección 6)
-/carrito              → Vista del carrito + botón "Enviar pedido por WhatsApp"
-/nosotros             → Historia de la floristería, fotos
-/contacto             → Dirección, mapa embebido, horario, teléfono, redes sociales
-/politica-privacidad  → Política de privacidad (ver sección 6.7)
-/terminos-condiciones → Términos y condiciones (ver sección 6.7)
-```
+**Nota:** el front-end del sitio público sigue siendo HTML + CSS + JS vanilla, sin build step. Las páginas de catálogo/producto consultan el dato mediante `fetch()` a pequeños endpoints PHP en `/api/*.php`, que a su vez leen MySQL en cada solicitud (sin caché intermedia) — por eso el catálogo se actualiza al instante apenas se guarda algo en `/admin`. `/admin` usa PHP + PDO directamente contra la misma base de datos.
 
 ---
 
@@ -129,7 +80,7 @@ Decisión del cliente: **sin frameworks JS, sin build step, hosting compartido t
 
 **Producto (tabla `productos`):** `nombre`, `slug`, `descripcion_corta` (flores principales, se muestra en la tarjeta), `descripcion` (texto largo, ficha de producto), `imagen`, `incluye` (texto libre, ej. "Tarjeta personalizada y empaque premium"), `entrega_disponible` / `retiro_tienda_disponible` (booleanos independientes), `disponible`, `destacado`.
 
-**Chips de categoría en `catalogo.html` (2026-08-13):** el `<select id="filter-categoria">` se reemplazó por una fila de píldoras con scroll horizontal (`.category-chips`/`.category-chip` en `styles.css`, lógica en `initCatalog()` de `js/productos.js`) — un toque para filtrar en vez de abrir un `<select>` nativo, y en móvil se navegan arrastrando (mismo patrón `overflow-x:auto` que ya usa el selector de talla del personalizador). El estado de la categoría activa vive en la variable `categoriaActual` (ya no en `selCategoria.value`, ese elemento no existe más); `poblarSubcategorias()` y `render()` la leen directo. Cada chip usa el emoji de `categorias.icono` si existe (hoy la semilla no tiene íconos cargados, así que los chips se ven solo con texto — probar poniéndole un emoji a una categoría desde `/admin/categorias.php` para ver el ícono en el chip). Búsqueda, subcategoría y orden siguen en `.filter-bar` sin cambios.
+**Chips de categoría en `catalogo.html` (2026-08-13):** el `<select id="filter-categoria">` se reemplazó por una fila de píldoras con scroll horizontal (`.category-chips`/`.category-chip` en `styles.css`, lógica en `initCatalog()` de `js/productos.js`) — un toque para filtrar en vez de abrir un `<select>` nativo, y en móvil se navegan arrastrando (mismo patrón `overflow-x:auto` que usa el selector de talla de la ficha de producto). El estado de la categoría activa vive en la variable `categoriaActual` (ya no en `selCategoria.value`, ese elemento no existe más); `poblarSubcategorias()` y `render()` la leen directo. Cada chip usa el emoji de `categorias.icono` si existe (hoy la semilla no tiene íconos cargados, así que los chips se ven solo con texto — probar poniéndole un emoji a una categoría desde `/admin/categorias.php` para ver el ícono en el chip). Búsqueda, subcategoría y orden siguen en `.filter-bar` sin cambios.
 
 **Tallas y precio (tabla `producto_variantes`):** cada producto puede tener hasta 4 variantes de talla — **S, M, L, XL** — y **cada talla tiene su propio precio** (no es un precio único con recargo). La ficha de producto deja elegir la talla y el precio se actualiza en vivo. Un producto necesita al menos una talla con precio para poder publicarse.
 
@@ -138,69 +89,49 @@ Decisión del cliente: **sin frameworks JS, sin build step, hosting compartido t
 
 **Tarjeta de producto — chips de talla y tipografía tipo Stampa (2026-08-13):** la clienta pidió acercar la tipografía y presentación de las tarjetas del catálogo a la referencia visual de stampahn.com (nombre del producto en mayúsculas bold, precio en peso normal, swatches de variante bajo el precio). LIRIOS no maneja color por producto, así que el rol de esos swatches lo cumplen **chips de talla** (`.card-tallas` / `.talla-chip` en `styles.css`, lógica en `productCardHtml`/`wireTallaChips` de `js/productos.js`): se muestran solo cuando el producto tiene más de una talla disponible, y al hacer clic actualizan en vivo el precio mostrado en la tarjeta (`data-card-price`) y la talla que agrega el botón "Agregar" (`data-add`/`data-talla`), sin necesidad de entrar al detalle. `product-card h3` pasó a mayúsculas/800 y `.card-price` a peso normal (antes semibold) para el look tipo Stampa. Mismo componente reutilizado en destacados del home, catálogo y relacionados de `producto.html` (antes el bloque de relacionados duplicaba su propio HTML a mano). El catálogo semilla actual solo tiene 1 talla por producto, así que los chips no se ven todavía con datos reales — probar creando un producto con 2+ tallas desde `/admin/productos.php`.
 
-### 6.2 Personalizador de ramo
-
-**Mejoras de usabilidad (2026-07-26):**
-- **Plantillas rápidas** (`PRESETS` en `js/personalizar.js`): 4 combinaciones ya armadas (ej. "Clásico Rojo", "Sol de Girasoles") que llenan flores/papel/listón con un clic, para quien no quiere elegir tallo por tallo. Se validan en el navegador contra las opciones cargadas desde `/admin`, así que si Claudia borra una flor/color usada en una plantilla, esa plantilla simplemente deja de mostrarse (no rompe la página).
-- **Progreso de tallos visible:** barra + contador "X / 24 tallos" junto al encabezado de la sección de flores.
-- **Total por flor y por color a la vista:** cada tarjeta de flor muestra un badge con el total de tallos de esa flor (sumando todos los colores), y cada muestra de color con tallos agregados muestra su propio contador — antes solo se veía la cantidad del color seleccionado en ese momento, lo que hacía parecer que se "perdían" tallos al cambiar de color.
-- **Botón "Vaciar ramo"** junto al encabezado, para reiniciar sin recargar la página.
-
-- Flujo tipo wizard o formulario de un solo paso con:
-  - Tipo de flor base
-  - Color dominante (paleta de colores de flores, no confundir con la paleta de marca)
-  - Tamaño — afecta precio
-  - Extras — cada uno con precio adicional
-  - Campo de texto para dedicatoria/nota especial
-  - Preview del precio total actualizándose en tiempo real
-  - Botón "Agregar al carrito"
-- Todas estas opciones (tipos de flor, colores, papeles de envoltura, listones y extras, con sus precios) viven en las tablas `pers_flores`, `pers_colores`, `pers_wraps`, `pers_ribbons` y `pers_extras` de la base de datos, y son **editables por el negocio desde el panel `/admin/personalizacion.php`** (sección 7.1) — no están fijas en el código. El personalizador consulta `/api/opciones-personalizacion.php` (que lee MySQL en vivo) y arma el formulario dinámicamente.
-- Valores iniciales sugeridos para precargar la base de datos (el negocio los puede cambiar luego desde el panel):
-
-  **Tipos de flor:** Rosas, Girasoles, Lirios, Astromelias, Mixto
-
-  **Colores:** Rojo, Rosado, Blanco, Amarillo, Mixto
-
-  **Tamaños:** Pequeño (+L. 0.00), Mediano (+L. 150.00), Grande (+L. 300.00)
-
-  **Extras:**
-  | Extra | Precio sugerido |
-  |---|---|
-  | Chocolates | L. 120.00 |
-  | Peluche pequeño | L. 200.00 |
-  | Globo metálico | L. 80.00 |
-  | Tarjeta con dedicatoria | L. 30.00 |
-  | Florero de vidrio | L. 150.00 |
-
-  ⚠️ Estos precios son placeholders razonables para poblar el sitio inicial — Claudia debe ajustarlos a los precios reales desde el panel antes de publicar.
-
 ### 6.3 Carrito
-- Lista de items (productos normales + ramos personalizados) con cantidad editable y opción de eliminar.
+- Lista de items con cantidad editable y opción de eliminar.
 - Subtotal por item y total general.
 - Persistencia en `localStorage` (JS vanilla: `localStorage.setItem/getItem` con JSON) para que no se pierda al recargar.
 - Contador de items visible en el header (ícono de carrito).
+- **Campos del cliente antes de enviar (2026-08-22):** además de nombre y nota, `/carrito.html` pide teléfono, fecha/hora de entrega, delivery o retiro, dirección, dedicatoria y forma de pago. Los valores se leen en `initCartPage()` de `js/cart.js` y viajan tanto al mensaje de WhatsApp (`buildOrderMessage()` en `js/whatsapp.js`, recibe un objeto `datosCliente` en vez de parámetros sueltos) como al `POST /api/pedidos.php`, que los guarda en columnas nuevas de la tabla `pedidos` (`telefono`, `fecha_entrega`, `hora_entrega`, `tipo_entrega`, `direccion`, `dedicatoria`, `forma_pago`) y los muestra en `/admin/pedidos.php`. Los campos que el cliente deja vacíos salen como `__` en el mensaje de WhatsApp y "(sin especificar)" en el correo de notificación.
+- **Campos obligatorios marcados con `*` (2026-08-22):** de todos los campos de arriba, solo **Nombre, Teléfono, Fecha de entrega y Delivery o retiro** son obligatorios — Hora, Dirección, Dedicatoria, Forma de pago y Nota quedan opcionales. La etiqueta "(opcional)" se quitó de los campos opcionales (ya es el estado por defecto) y se reemplazó por un `<span class="required-mark">*</span>` solo en los 4 obligatorios, con una leyenda "* Campos obligatorios" arriba del formulario. `validarCamposObligatorios()` en `js/cart.js` corre al hacer clic en "Enviar pedido por WhatsApp": si falta alguno, le pone borde rojo (`.form-field.invalid`, variable `--error-texto`), enfoca el primero vacío y muestra un toast — sin abrir WhatsApp ni registrar el pedido. Esto es una excepción deliberada al principio de "nunca bloquear la venta" de la sección 6.4: ahí se refiere a no bloquear el envío por WhatsApp si falla el registro en la base de datos (problema técnico), no a permitir pedidos sin datos mínimos de contacto/logística (decisión de negocio).
+- **Rediseño de `/carrito.html` (2026-08-22):** la clienta pidió mejorar la vista ("no me gusta como se ve"), sin más detalle — se hizo una auditoría UI/UX completa y dos cambios estructurales:
+  - **Lista de productos como recibo, no como tarjetas sueltas:** antes cada item era su propia tarjeta blanca con sombra (N cajas apiladas). Ahora `.cart-items` es una sola tarjeta contenedora y cada `.cart-item` es una fila separada por un borde inferior, con hover sutil (fondo `--crema-suave`) — se lee como un recibo/lista de pedido. La imagen pasó de 84×100px a 92×108px con la forma "arco" de marca (`var(--arch)`, ya usada en otras partes del sitio); el código de ramo pasó de texto monospace suelto a una píldora (`.item-code`); el botón "Eliminar" ganó un ícono de basurero. El cambio requirió tocar `renderCartPage()` en `js/cart.js` (la plantilla de cada `.cart-item`), no solo CSS.
+  - **Formulario acortado con divulgación progresiva:** el formulario de 9 campos apilados ("muro de inputs") se reorganizó en 3 niveles de prioridad visual: Nombre/Teléfono sueltos arriba, **Entrega** (fecha, hora, delivery-o-retiro, dirección) agrupado dentro de un bloque con fondo `--crema-suave` y esquinas redondeadas (`.form-section`, ya no solo una etiqueta con línea divisoria), y Dedicatoria/Forma de pago/Nota — los 3 campos verdaderamente opcionales — escondidos por defecto detrás de un `<details class="extra-details">` ("Dedicatoria, forma de pago o nota (opcional)", con el mismo chevron rotatorio `.nav-dropdown-caret` que ya usa el submenú de categorías del header). Esto acorta el formulario visible de 9 a 6 campos sin quitar funcionalidad — los campos obligatorios nunca quedan escondidos detrás del `<details>`. Los `id` de todos los inputs no cambiaron, así que `js/cart.js` no necesitó tocarse para la lectura de valores ni la validación (`.closest('.form-field')` sigue encontrando el wrapper correcto sin importar cuántos niveles de `.form-section`/`<details>` haya alrededor).
 
 ### 6.4 Compartir por WhatsApp
 - Botón principal en `/carrito`: **"Enviar pedido por WhatsApp"**.
 - Al hacer clic, además de abrir WhatsApp, se envía (fire-and-forget, sin bloquear ni esperar respuesta) un `POST` a `/api/pedidos.php` que registra el pedido en las tablas `pedidos`/`pedido_items` — esto es lo que alimenta la reportería de ventas del panel admin (sección 6.6). Si ese registro falla (sin conexión, servidor caído), el pedido por WhatsApp se envía igual: nunca se bloquea la venta por un problema de tracking.
 - Genera un mensaje de texto con:
-  - Listado de productos (nombre, cantidad, personalización si aplica, precio unitario, **código de ramo**)
+  - Listado de productos (nombre, cantidad, precio unitario, **código de ramo**)
   - Total general
-  - Nombre del cliente y nota (campo opcional antes de enviar)
+  - Nombre, teléfono, fecha/hora de entrega, delivery o retiro, dirección, dedicatoria, forma de pago y nota — todos los campos que el cliente llenó en `/carrito.html` (sección 6.3); cualquiera que haya dejado vacío sale como `__` en el mensaje
+  - Un enlace directo a la foto real del arreglo (o una lista de enlaces, uno por producto, si el carrito tiene más de un item) — ver el punto de "Referencia del arreglo" más abajo
 - Abre `https://wa.me/<numero-floristeria>?text=<mensaje-url-encoded>`.
-- Ejemplo de mensaje generado:
+- Ejemplo de mensaje generado (`buildOrderMessage()` en `js/whatsapp.js`, formato pedido por la clienta el 2026-08-22):
   ```
-  ¡Hola! Quiero hacer este pedido en LIRIOS Floristería:
+  *PEDIDO WEB - LIRIOS FLORISTERÍA*
 
-  1x Ramo personalizado (Rosas rojas, mediano, + chocolates) - L. 650.00 [Código: RM-4K2P9]
-  2x Girasoles clásicos - L. 300.00 c/u [Código: RM-9X0A1]
+  - Ramo de rosas rojas (mediano) - L. 650.00 [Código: RM-4K2P9]
+  - 2x Girasoles clásicos - L. 300.00 c/u [Código: RM-9X0A1]
+  *Total:* L. 1,250.00
 
-  Total: L. 1,250.00
+  *Nombre:* Aldo Noe Perez Moreno
+  *Teléfono:* 9988-7766
+  *Entrega:* 25/08/2026 / *Hora:* 14:30
+  *Delivery o retiro:* Delivery a domicilio
+  *Dirección:* Barrio El Centro, 2da calle
+  *Dedicatoria:* __
+  *Pago:* __
+  *Nota:* __
 
-  Nombre: _____
-  Nota: _____
+  *Referencia del arreglo:*
+  https://liriosfloristeria.com/images/productos/96d2186b-19b2-4e64-9b34-70f7a8526f84.webp
   ```
-- **Código de ramo por ítem (2026-08-05):** cada item del carrito lleva un código corto (ej. `RM-4K2P9`), calculado en el navegador con un hash determinista de la `key` del item (`codigoRamo()` en `js/cart.js`) — el mismo producto+talla, o la misma combinación exacta de un ramo personalizado, siempre produce el mismo código. Se genera 100% en el cliente (nunca se espera al servidor) para no romper el principio de "el WhatsApp nunca se bloquea por el registro del pedido" de arriba: el código va en el mensaje de WhatsApp y, en paralelo, se manda también a `/api/pedidos.php`, que lo guarda en `pedido_items.codigo` (columna `VARCHAR(20)`, saneada con whitelist `[A-Z0-9-]`). `/admin/codigos.php` es el reporte para buscar un código y ver a qué ramo corresponde, con la lista de pedidos donde apareció — así Claudia puede identificar el ramo exacto a partir de lo que el cliente copió y pegó de WhatsApp.
+- **Sin emoji ni íconos, formato con negritas de WhatsApp (2026-08-22):** la primera versión de este mensaje usaba emoji "modernos" (🌸💐💰👤📱📅🚚📍💌💳📝📸, rango astral U+1F000+, 4 bytes UTF-8) y, tras un reporte de "�" en WhatsApp Web (bug conocido del prellenado con caracteres astrales — se verificó con inspección de bytes que el link `wa.me` que genera el sitio está perfectamente codificado, el problema era de WhatsApp), se cambiaron por símbolos BMP (`❀ • ☎ ✈ ✉ ✎`). La clienta pidió después quitar **todos** los íconos ("no me gusta") y formatear mejor el mensaje. Versión final: cero emoji/símbolos decorativos — las etiquetas de cada campo (`*Nombre:*`, `*Total:*`, etc.) usan el markdown nativo de WhatsApp (asteriscos → negrita) para la jerarquía visual, y cada producto lleva un guion `-` como viñeta. Es texto 100% ASCII salvo los acentos del español, así que no puede volver a pasar el bug de WhatsApp Web con caracteres astrales.
+- **Referencia del arreglo = foto real, no placeholder (2026-08-22):** `buildReferenciaLineas()` en `js/whatsapp.js` toma el campo `imagen` de cada item del carrito (ruta relativa tal como la guarda `/admin/subir-imagen.php`, ej. `images/productos/xxx.webp`) y la convierte en URL absoluta con `new URL(ruta, location.href)` — se resuelve contra `location.href` y no contra `location.origin` a propósito, porque el sitio es de estructura plana (todas las páginas públicas e `/images` viven en la misma carpeta) y así el enlace sale correcto tanto si el sitio está publicado en la raíz del dominio como si está en una subcarpeta (como este entorno de desarrollo, `/PROYECTOS-PHP/lirios/`). Con 1 producto en el carrito sale un solo enlace en "Referencia del arreglo"; con 2+ sale una lista "Referencia de los arreglos:" con un enlace por producto, precedido de su nombre. Si algún item no tiene foto (`imagen` es `null`), simplemente no aparece en la lista; si ningún item del carrito tiene foto, la línea dice "(sin foto disponible)".
+- **Código de ramo por ítem (2026-08-05):** cada item del carrito lleva un código corto (ej. `RM-4K2P9`), calculado en el navegador con un hash determinista de la `key` del item (`codigoRamo()` en `js/cart.js`) — el mismo producto+talla siempre produce el mismo código. Se genera 100% en el cliente (nunca se espera al servidor) para no romper el principio de "el WhatsApp nunca se bloquea por el registro del pedido" de arriba: el código va en el mensaje de WhatsApp y, en paralelo, se manda también a `/api/pedidos.php`, que lo guarda en `pedido_items.codigo` (columna `VARCHAR(20)`, saneada con whitelist `[A-Z0-9-]`). `/admin/codigos.php` es el reporte para buscar un código y ver a qué ramo corresponde, con la lista de pedidos donde apareció — así Claudia puede identificar el ramo exacto a partir de lo que el cliente copió y pegó de WhatsApp.
 - **Ya NO se envía imagen-resumen del pedido (2026-08-05):** hasta el 2026-08-02 existía `js/order-image.js`, que dibujaba en `<canvas>` un "ticket" con foto de cada producto y lo compartía junto al texto (o lo descargaba con un modal de respaldo). Se eliminó por pedido de la clienta a favor del código de ramo de arriba, que resuelve el mismo problema (identificar qué pidió el cliente) sin depender de que el cliente adjunte una imagen a mano. El flujo de "Enviar pedido por WhatsApp" ahora es directo: registra el pedido (fire-and-forget) y abre `wa.me` de inmediato, sin pasos intermedios.
 
 ### 6.5 Contacto / Ubicación
@@ -243,7 +174,6 @@ Estructura plana, lista para subir tal cual a cPanel (todo dentro de `public_htm
 /index.html               → Home
 /catalogo.html            → Grid de productos
 /producto.html            → Detalle de producto (recibe ?id= por query string)
-/personalizar.html        → Constructor de ramo
 /carrito.html             → Vista del carrito
 /nosotros.html            → Sobre la floristería
 /contacto.html            → Ubicación, horario, redes
@@ -260,14 +190,12 @@ Estructura plana, lista para subir tal cual a cPanel (todo dentro de `public_htm
   cart.js                   (lógica del carrito: agregar, quitar, totales, localStorage)
   whatsapp.js                (arma el mensaje y el link de wa.me)
   productos.js                (consume /api/productos.php y /api/producto.php, renderiza catálogo/detalle)
-  personalizar.js              (lógica del constructor de ramo, lee /api/opciones-personalizacion.php)
 /config
   db.php                    (conexión PDO compartida a MySQL — la usan /api/*.php y /admin)
 /api                        → Endpoints PHP para el sitio público (JSON, MySQL en vivo)
   categorias.php             (árbol categoría > subcategoría — solo lectura)
   productos.php               (listado del catálogo, con filtros ?categoria=&subcategoria=&orden= — solo lectura)
   producto.php                 (detalle de un producto por ?slug=, con variantes y relacionados — solo lectura)
-  opciones-personalizacion.php  (flores, colores, papeles, listones y extras del personalizador — solo lectura)
   pedidos.php                    (POST — único endpoint de escritura: registra el pedido enviado por WhatsApp)
 /database
   schema.sql                (esquema completo + datos semilla: categorías, subcategorías, catálogo y opciones)
@@ -284,7 +212,6 @@ Estructura plana, lista para subir tal cual a cPanel (todo dentro de `public_htm
   reportes.php                     (ventas diarias/semanales/mensuales, ver sección 6.6)
   productos.php                       (CRUD de productos y sus tallas/precios)
   categorias.php                         (CRUD de categorías y subcategorías)
-  personalizacion.php                       (editor de tipos de flor, colores, papeles, listones, extras)
   subir-imagen.php                            (subida de fotos, con conversión automática a WebP)
   includes/
     auth.php                    (verifica sesión, protege todas las páginas del panel)
@@ -299,20 +226,7 @@ Estructura plana, lista para subir tal cual a cPanel (todo dentro de `public_htm
 
 ### 7.1 Panel de administración (`/admin`)
 
-Objetivo: que Claudia (o cualquier persona del negocio sin conocimientos técnicos) pueda **agregar/editar/eliminar productos del catálogo** (incluyendo tallas y precios), **organizar la taxonomía de categorías/subcategorías** y **editar las opciones del personalizador de ramo** (tipos de flor, colores, papeles, listones, extras y precios) desde el navegador, sin tocar código ni SQL a mano.
-
-- **Login:** una sola contraseña de administrador (no se necesita sistema de usuarios múltiples para este tamaño de negocio). Contraseña guardada **hasheada** (`password_hash` de PHP) en `includes/config.php`, nunca en texto plano.
-- **Sesión:** PHP `session_start()` — todas las páginas dentro de `/admin` (excepto `index.php`) verifican con `includes/auth.php` que haya sesión activa; si no, redirigen al login.
-- **`productos.php`:** tabla con el catálogo actual (nombre, categoría/subcategoría, tallas y precios, imagen, disponible sí/no), botones para editar o eliminar cada fila, y un formulario para agregar un producto nuevo — incluyendo hasta 4 variantes de talla (S/M/L/XL) con su propio precio, el campo "incluye" y los checkboxes de entrega/retiro. Al guardar, escribe en las tablas `productos` y `producto_variantes` (MySQL).
-- **`categorias.php`:** CRUD de categorías y subcategorías (nombre, ícono, orden). Antes de eliminar una categoría o subcategoría, el sistema verifica que no tenga productos asociados (restricción de llave foránea).
-- **`personalizacion.php`:** formularios para agregar/quitar/editar cada tipo de flor, color, papel de envoltura, listón y extra (con su precio). Al guardar, escribe en las tablas `pers_*` (MySQL). Esta es la pantalla que resuelve el pedido de "que ellos puedan editar las opciones de personalización".
-- **`subir-imagen.php`:** input de tipo archivo que sube la foto a `/images/productos/` y valida tipo/tamaño de archivo antes de guardarla.
-- **Seguridad mínima recomendada:**
-  - Contraseña fuerte, cambiable desde una pantalla de "cambiar contraseña" dentro del propio panel (`/admin/cambiar-password.php`, resuelto 2026-07-26) — ya no hace falta editar código para cambiarla.
-  - `.htaccess` en `/admin` como capa extra (aunque la sesión ya protege el acceso).
-  - Servir el sitio con HTTPS (la mayoría de hosting con cPanel ofrece SSL gratis vía Let's Encrypt — hay que activarlo).
-  - Validar y sanitizar todo lo que entra por los formularios antes de escribirlo en la base de datos (consultas siempre parametrizadas con PDO, nunca concatenadas).
-- **Por qué MySQL y no JSON plano:** con 12 categorías, ~80 subcategorías, tallas con precio propio por producto y varias tablas de opciones de personalización, el catálogo dejó de ser "un puñado de productos" para ser un modelo relacional real — normalizarlo en MySQL evita duplicar nombres de categoría en cada producto, permite validar relaciones con llaves foráneas (ej. no puedes borrar una subcategoría con productos activos) y hace que los reportes/filtros por categoría sean consultas SQL directas en vez de recorrer arreglos en JS. Prácticamente todo hosting compartido con cPanel incluye MySQL/MariaDB sin costo adicional, así que la portabilidad (sección 1) no se ve afectada.
+Ver `admin/CLAUDE.md` para el detalle completo (login/sesión, qué escribe cada pantalla, seguridad, por qué MySQL) — se carga solo al trabajar dentro de `/admin`.
 
 ---
 
@@ -320,15 +234,15 @@ Objetivo: que Claudia (o cualquier persona del negocio sin conocimientos técnic
 
 - HTML semántico (`<header>`, `<nav>`, `<main>`, `<section>`, `<footer>`), sin librerías externas salvo que sea estrictamente necesario.
 - JavaScript vanilla ES6+ (funciones, `fetch`, módulos con `<script type="module">` si conviene separar responsabilidades entre archivos).
-- Colores SIEMPRE como variables CSS definidas en `:root` dentro de `styles.css` (sección 3), nunca hardcodear hex sueltos dentro de otros archivos o inline styles.
+- Colores SIEMPRE como variables CSS definidas en `:root` dentro de `styles.css` (ver sección 3 y `css/CLAUDE.md`), nunca hardcodear hex sueltos dentro de otros archivos o inline styles.
 - Mobile-first: la mayoría de los clientes probablemente entrarán desde el celular para luego escribir por WhatsApp.
 - Nombrar archivos, IDs y clases CSS en inglés o kebab-case neutro (convención de código: `cart.js`, `.product-card`), pero todo el contenido/UI visible en **español** (Honduras).
 - Formatear precios en **Lempiras (L.)**, con separador de miles.
-- El nombre de la marca se escribe siempre **"LIRIOS"** en mayúscula en todo texto visible del sitio y del panel admin (títulos, encabezados, footer, mensajes de WhatsApp) — ej. "LIRIOS Floristería". Excepción: cuando "Lirios" aparece como nombre de una flor (el lirio) dentro del catálogo o el personalizador, se deja en formato de oración normal, ya que ahí es un sustantivo común y no la marca.
+- El nombre de la marca se escribe siempre **"LIRIOS"** en mayúscula en todo texto visible del sitio y del panel admin (títulos, encabezados, footer, mensajes de WhatsApp) — ej. "LIRIOS Floristería". Excepción: cuando "Lirios" aparece como nombre de una flor (el lirio) dentro del catálogo, se deja en formato de oración normal, ya que ahí es un sustantivo común y no la marca.
 - Evitar dependencia de CDNs externos cuando sea posible (fuentes de Google Fonts está bien, pero frameworks CSS/JS externos no, ya que se pidió "puro").
 - Cada página HTML debe incluir metaetiquetas básicas de SEO (`title`, `description`) y Open Graph, ya que es un negocio local que se beneficia de aparecer bien en Google/redes.
 - El sitio público (`.html` + `/api/*.php`) y el panel (`/admin/*.php`) se mantienen claramente separados: los endpoints de `/api` son de **solo lectura**, con una única excepción deliberada — `/api/pedidos.php` (POST), que registra el pedido que un cliente anónimo envía por WhatsApp desde `carrito.html` (equivalente a un formulario de contacto: cualquiera puede escribir ahí, pero solo para crear ese tipo de registro, nunca para leer o modificar el catálogo). Toda otra escritura pasa por `/admin` con sesión verificada.
-- **Cache-busting manual:** al no haber build step, los `<script src="js/...">` y `<link href="css/...">` propios llevan un query string `?v=N` (ej. `js/personalizar.js?v=2`). Cada vez que se edite un archivo `.js` o `.css` existente, hay que subir ese número en **todas** las páginas que lo referencian — si no, los navegadores que ya visitaron el sitio pueden seguir sirviendo la versión vieja desde caché y no ver el cambio (nos pasó durante el desarrollo: ver sección de personalización).
+- **Cache-busting manual:** al no haber build step, los `<script src="js/...">` y `<link href="css/...">` propios llevan un query string `?v=N` (ej. `js/productos.js?v=18`). Cada vez que se edite un archivo `.js` o `.css` existente, hay que subir ese número en **todas** las páginas que lo referencian — si no, los navegadores que ya visitaron el sitio pueden seguir sirviendo la versión vieja desde caché y no ver el cambio (nos pasó durante el desarrollo).
 - En PHP: acceso a datos siempre vía **PDO con consultas parametrizadas** (`config/db.php`), nunca SQL concatenado con variables de usuario; usar transacciones (`beginTransaction`/`commit`/`rollBack`) cuando una acción escribe en más de una tabla (ej. producto + sus variantes de talla); siempre validar/sanitizar entradas de formularios antes de guardarlas.
 
 ---
@@ -336,7 +250,6 @@ Objetivo: que Claudia (o cualquier persona del negocio sin conocimientos técnic
 ## 9. Pendiente de definir con el cliente (Claudia)
 
 - [x] Número de WhatsApp completo con código de país → **+504 8750-2362** (`50487502362`)
-- [x] Opciones de personalización de ramo → resuelto: quedan precargadas con valores por defecto (sección 6.2) y son 100% editables desde el panel `/admin`
 - [x] Dominio y proveedor de hosting → resuelto: el sitio es portable a cualquier hosting con PHP, se decide después sin afectar el desarrollo
 - [x] Edición del catálogo sin programador → resuelto: se construye el panel `/admin` en PHP (sección 7.1)
 - [x] Taxonomía de categorías del catálogo → resuelto (2026-07-22): la clienta definió 12 categorías con sus subcategorías (sección 6.1), ya sembradas en `database/schema.sql`

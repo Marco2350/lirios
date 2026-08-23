@@ -589,6 +589,39 @@ textarea {
   flex-wrap: wrap;
 }
 
+/* ---------- Carga rápida de productos ---------- */
+.rapido-filas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.4rem 0 1rem;
+}
+
+.rapido-fila {
+  display: grid;
+  grid-template-columns: 1fr 140px 180px auto;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.rapido-fila input {
+  margin: 0;
+}
+
+.rapido-fila input[type="file"] {
+  font-size: 0.78rem;
+}
+
+#rapido-agregar-fila {
+  margin-right: 0.6rem;
+}
+
+@media (max-width: 560px) {
+  .rapido-fila {
+    grid-template-columns: 1fr;
+  }
+}
+
 form.inline {
   display: inline;
 }

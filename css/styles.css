@@ -28,6 +28,7 @@
      tal cual en botones, bordes e íconos donde el contraste sí es correcto. */
   --mostaza-texto: #6E5220;
   --exito-texto: #1B7A42;
+  --error-texto: #B3261E;
 
   /* Textura tipo oro: gradiente foil (sheen) + veta metálica fina, usados
      juntos como múltiples backgrounds sobre superficies doradas (botón
@@ -36,9 +37,13 @@
   --gold-shine: linear-gradient(135deg, #F1E1B0 0%, #D4B268 24%, #B8933E 50%, #8F6F2C 68%, #D4B268 86%, #F1E1B0 100%);
   --gold-brushed: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.32) 0px, rgba(255, 255, 255, 0.32) 1px, transparent 1px, transparent 4px);
 
-  /* Tipografía - inspirada en stampahn.com: DM Sans para títulos/UI
-     (bold, geométrica, con carácter gráfico) + Arimo para texto de cuerpo */
-  --font-display: "DM Sans", system-ui, -apple-system, sans-serif;
+  /* Tipografía — rediseño 2026-08-21 (v4, "Elegancia Floral"): a pedido de
+     la clienta (referencia visual por WhatsApp) se deja el look bold/
+     geométrico inspirado en stampahn.com a favor de uno más clásico y
+     romántico de floristería — Playfair Display (serif editorial, con
+     itálica) para títulos/UI, Arimo se mantiene para el cuerpo de texto
+     (ya probada, buena legibilidad, no hacía falta cambiarla). */
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
   --font-body: "Arimo", "Helvetica Neue", Arial, sans-serif;
 
   /* Firma visual refinada (menos "curvy", más arquitectónica) */
@@ -290,14 +295,63 @@ p {
   box-shadow: none;
 }
 
+/* ---------- Barra de anuncios (2026-08-21) ----------
+   Franja fija arriba del header, en las 9 páginas públicas. Se desplaza
+   con la página (no es sticky) — al hacer scroll el header queda pegado
+   arriba solo, como siempre. */
+.announce-bar {
+  background-color: var(--carbon);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.announce-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 2rem;
+  padding-block: 0.55rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+}
+
+.announce-bar-inner span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.announce-bar-inner svg {
+  flex-shrink: 0;
+  color: var(--mostaza-light);
+}
+
+@media (max-width: 640px) {
+  .announce-bar-inner {
+    gap: 0.4rem 1.1rem;
+    font-size: 0.72rem;
+  }
+}
+
 /* ---------- Header ---------- */
+/* Se eleva solo al hacer scroll (.is-scrolled, alternada por main.js) en
+   vez de llevar siempre la misma línea/sombra fija — así el header se
+   funde con el fondo --crema del hero al inicio y gana presencia recién
+   cuando el usuario empieza a navegar el contenido. */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 50;
   background-color: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(143, 111, 44, 0.18);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.site-header.is-scrolled {
+  border-bottom-color: rgba(143, 111, 44, 0.18);
+  box-shadow: 0 8px 24px -18px rgba(36, 31, 23, 0.4);
 }
 
 .header-inner {
@@ -351,6 +405,181 @@ p {
 
 .site-nav a[aria-current="page"] {
   color: var(--mostaza-dark);
+}
+
+/* ---------- Submenú "Catálogo" (14 categorías) ----------
+   <details>/<summary> nativo: un solo marcado sirve para desktop (clic
+   o foco abre el panel) y para el menú móvil (se acopla como otro ítem
+   vertical dentro de .site-nav, sin necesitar lógica de hover aparte).
+   El contenido se llena en vivo desde /api/categorias.php (main.js). */
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  position: relative;
+  color: var(--carbon);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.35rem 0;
+}
+
+.nav-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-dropdown summary::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--mostaza);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+
+.nav-dropdown summary:hover::before,
+.nav-dropdown[open] summary::before {
+  transform: scaleX(1);
+}
+
+.nav-dropdown-caret {
+  width: 9px;
+  height: 9px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.2s ease;
+}
+
+.nav-dropdown[open] .nav-dropdown-caret {
+  transform: rotate(225deg) translateY(1px);
+}
+
+/* Rediseño 2026-08-21 (v2): antes era un rectángulo blanco liso, sin
+   borde ni conexión visual con el link que lo abre — se sentía como un
+   cuadro de diálogo del navegador, no parte del sitio. Ahora usa el
+   radio grande de las tarjetas (--radius-lg), un borde/sombra a tono
+   con el resto de superficies elevadas, una etiqueta "Categorías" tipo
+   eyebrow arriba (::before) y una puntita que la conecta con "Catálogo"
+   (::after), más una entrada suave en vez de aparecer de golpe. */
+.nav-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 84vw);
+  padding: 1.2rem 1.3rem 1.3rem;
+  background-color: var(--blanco);
+  border: 1px solid rgba(143, 111, 44, 0.14);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 26px 52px -16px rgba(36, 31, 23, 0.32);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.2rem 1.2rem;
+  z-index: 40;
+}
+
+.nav-dropdown[open] .nav-dropdown-panel {
+  animation: nav-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes nav-panel-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.nav-dropdown-panel::before {
+  content: "Categorías";
+  grid-column: 1 / -1;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(143, 111, 44, 0.14);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gris-calido);
+}
+
+.nav-dropdown-panel::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background-color: var(--blanco);
+  border-left: 1px solid rgba(143, 111, 44, 0.14);
+  border-top: 1px solid rgba(143, 111, 44, 0.14);
+  border-radius: 3px 0 0 0;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.nav-dropdown-panel a {
+  position: relative;
+  display: block;
+  padding: 0.55rem 0.7rem 0.55rem 1rem;
+  border-radius: 8px;
+  color: var(--carbon);
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition: background-color 0.15s ease, color 0.15s ease, padding-left 0.15s ease;
+}
+
+.nav-dropdown-panel a::before {
+  content: "";
+  position: absolute;
+  left: 0.32rem;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: var(--mostaza);
+  transform: translateY(-50%) scale(0);
+  transition: transform 0.15s ease;
+}
+
+.nav-dropdown-panel a:hover {
+  background-color: var(--crema-suave);
+  color: var(--mostaza-dark);
+  padding-left: 1.2rem;
+}
+
+.nav-dropdown-panel a:hover::before {
+  transform: translateY(-50%) scale(1);
+}
+
+.nav-dropdown-panel-all {
+  grid-column: 1 / -1;
+  margin-top: 0.4rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(143, 111, 44, 0.18);
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: var(--mostaza-dark) !important;
+}
+
+.nav-dropdown-panel-all::before {
+  display: none;
 }
 
 .header-actions {
@@ -426,40 +655,33 @@ p {
   transform: translateY(-7px) rotate(-45deg);
 }
 
-/* ---------- Hero - Contemporáneo lujoso ---------- */
+/* ---------- Hero - Portada con foto de flores ----------
+   Rediseño 2026-08-21 (v3): antes era fondo crema con textura + un
+   carrusel 3D de 5 fotos en tarjeta flotante a la derecha. A pedido de
+   la clienta (feedback por WhatsApp con anotaciones) se reemplaza por
+   una sola foto de flores a pantalla completa como fondo del hero
+   ("portada"), sin carrusel ni flechas — más directo, y evita el golpe
+   de mantener 5 fotos + botones sincronizados. El sello "hecho a mano"
+   se conserva (ver .hero-badge más abajo) pero ahora flota sobre la
+   foto en vez de sobre la tarjeta del carrusel. */
 .hero {
   position: relative;
   overflow: hidden;
-  padding-block: clamp(56px, 8vw, 88px);
-  /* Redisño 2026-08-13: los radiales usaban rgba(199,211,187,…) — un verde
-     salvia que quedó del rediseño de paleta anterior a la 2026-08-05 y
-     nunca se migró a dorado. Se reemplaza por tonos cálidos de --mostaza
-     y se suma una veta fina (grano sutil) para dar textura al fondo, en
-     línea con --gold-brushed pero mucho más tenue al ser sobre --crema. */
-  background:
-    repeating-linear-gradient(115deg, rgba(36, 31, 23, 0.015) 0px, rgba(36, 31, 23, 0.015) 1px, transparent 1px, transparent 5px),
-    radial-gradient(ellipse 55% 65% at 88% 8%, rgba(217, 192, 138, 0.22), transparent 68%),
-    radial-gradient(ellipse 40% 50% at 4% 96%, rgba(184, 147, 62, 0.12), transparent 70%),
-    var(--crema);
-  border-bottom: 1px solid rgba(143, 111, 44, 0.08);
+  min-height: clamp(520px, 72vh, 720px);
+  display: flex;
+  align-items: center;
+  background-size: cover;
+  background-position: center;
+  /* Fallback si la foto no carga: misma textura dorada del resto del sitio */
+  background-image: var(--gold-brushed), var(--gold-shine);
 }
 
-/* Marca de agua tipográfica gigante */
-.hero-watermark {
+.hero-scrim {
   position: absolute;
-  top: clamp(-30px, -2vw, -10px);
-  right: -2vw;
-  font-family: var(--font-display);
-  font-style: normal;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  font-size: clamp(7rem, 22vw, 19rem);
-  line-height: 1;
-  color: rgba(143, 111, 44, 0.045);
-  -webkit-text-stroke: 1px rgba(143, 111, 44, 0.10);
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(20, 16, 10, 0.82) 0%, rgba(20, 16, 10, 0.5) 48%, rgba(20, 16, 10, 0.18) 78%),
+    linear-gradient(180deg, rgba(20, 16, 10, 0.25) 0%, rgba(20, 16, 10, 0.15) 40%, rgba(20, 16, 10, 0.45) 100%);
 }
 
 .hero .container {
@@ -467,25 +689,34 @@ p {
   z-index: 1;
 }
 
-.hero-grid {
-  display: grid;
-  gap: clamp(48px, 7vw, 84px);
+.hero-copy {
+  max-width: 640px;
+  padding-block: clamp(48px, 8vw, 72px);
+}
+
+.hero-urgency {
+  display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  margin-bottom: 1.3rem;
+  background-color: var(--mostaza);
+  border-radius: 999px;
+  color: var(--carbon);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
 }
 
 .hero-copy h1 em {
   font-style: italic;
-  color: var(--mostaza-dark);
+  color: var(--mostaza-light);
 }
 
 /* Entrada orquestada del hero (se anula con prefers-reduced-motion) */
 @keyframes hero-rise {
   from { opacity: 0; transform: translateY(26px); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes hero-frame-in {
-  from { opacity: 0; transform: scale(0.96) translateY(20px); }
   to { opacity: 1; transform: none; }
 }
 
@@ -499,25 +730,32 @@ p {
 .hero-copy > *:nth-child(4) { animation-delay: 0.44s; }
 .hero-copy > *:nth-child(5) { animation-delay: 0.58s; }
 
-.hero-carousel {
-  animation: hero-frame-in 1s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
 .hero-eyebrow {
   margin-bottom: 1.1rem;
 }
 
+.hero-eyebrow .eyebrow {
+  background-color: var(--blanco);
+  color: var(--carbon);
+}
+
+.hero-eyebrow .eyebrow::before {
+  background-color: var(--mostaza-dark);
+}
+
 .hero-copy h1 {
+  color: var(--blanco);
   line-height: 0.94;
   letter-spacing: -0.03em;
   text-wrap: balance;
   margin-bottom: 1.15rem;
+  text-shadow: 0 4px 26px rgba(0, 0, 0, 0.35);
 }
 
 .hero-lead {
   font-size: 1.08rem;
   line-height: 1.55;
-  color: var(--gris-calido);
+  color: rgba(255, 255, 255, 0.86);
   max-width: 39ch;
   margin-bottom: 2rem;
 }
@@ -529,30 +767,42 @@ p {
   margin-bottom: 2.4rem;
 }
 
-/* Trust bar — franja de estadísticas editorial (redisño 2026-08-13):
-   antes eran pares punto+texto sueltos; ahora es una franja con regla
-   superior y divisores verticales entre ítems, en mayúsculas tracked,
-   para que combine con el tono bold/uppercase que ya llevan las
-   tarjetas de producto. */
+/* .btn-outline por defecto es texto/borde --carbon (pensado para fondos
+   claros) — sobre la foto del hero no se lee, así que aquí se invierte
+   a blanco. */
+.hero-actions .btn-outline {
+  color: var(--blanco);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.hero-actions .btn-outline:hover {
+  background-color: var(--blanco);
+  border-color: var(--blanco);
+  color: var(--carbon);
+}
+
+/* Trust bar — franja de estadísticas editorial, en mayúsculas tracked,
+   con divisores verticales entre ítems. Colores claros: ahora vive
+   sobre la foto, no sobre --crema. */
 .hero-trust {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   padding-top: 1.4rem;
-  border-top: 1px solid rgba(36, 31, 23, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .trust-item {
   display: flex;
   align-items: center;
   padding: 0.2rem 1.2rem;
-  border-left: 1px solid rgba(36, 31, 23, 0.14);
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
   font-family: var(--font-display);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--carbon);
+  color: var(--blanco);
 }
 
 .trust-item:first-child {
@@ -562,105 +812,6 @@ p {
 
 .trust-dot {
   display: none;
-}
-
-/* ---------- Carrusel del hero - Tratamiento contemporáneo lujoso ---------- */
-.hero-carousel {
-  position: relative;
-  justify-self: center;
-  width: min(440px, 92vw);
-}
-
-/* Firma visual: acorde orgánico (pétalo) en dorado detrás del carrusel —
-   la versión floral del bloque de color audaz de stampahn.com. Lleva
-   textura tipo foil (veta metálica fina sobre el degradado) en vez de un
-   relleno plano — ver --gold-shine/--gold-brushed en :root. */
-.hero-carousel::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  top: -7%;
-  right: -14%;
-  width: 82%;
-  height: 88%;
-  background-image: var(--gold-brushed), linear-gradient(150deg, var(--mostaza-light) 0%, var(--mostaza) 55%, var(--mostaza-dark) 100%);
-  border-radius: 42% 58% 39% 61% / 55% 42% 58% 45%;
-  opacity: 0.92;
-}
-
-@media (max-width: 720px) {
-  .hero-carousel::before {
-    top: -5%;
-    right: -8%;
-    width: 74%;
-    height: 82%;
-  }
-}
-
-/* Marco doble: contorno dorado desplazado detrás de la foto */
-.frame-stack {
-  position: relative;
-}
-
-.frame-stack::before {
-  content: "";
-  position: absolute;
-  top: 26px;
-  left: 26px;
-  right: -20px;
-  bottom: -20px;
-  border: 2px solid rgba(143, 111, 44, 0.55);
-  border-radius: var(--radius-lg);
-  pointer-events: none;
-}
-
-.frame-stack .carousel-frame {
-  position: relative;
-  z-index: 1;
-}
-
-/* Sello circular giratorio — redisño 2026-08-13: antes un disco blanco
-   translúcido con texto mostaza (look delicado/floristería tierna); ahora
-   un sello sólido con la textura foil dorada del resto de la marca y
-   texto carbón para más contraste/peso, más acorde al tono bold del
-   resto del rediseño de tarjetas/hero. */
-.hero-badge {
-  position: absolute;
-  top: -40px;
-  left: -40px;
-  width: 108px;
-  height: 108px;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-image: var(--gold-brushed), var(--gold-shine);
-  background-size: auto, 240% 240%;
-  border: 4px solid var(--blanco);
-  border-radius: 50%;
-  box-shadow: var(--shadow-elevated);
-}
-
-.badge-ring {
-  position: absolute;
-  inset: 0;
-  animation: badge-spin 26s linear infinite;
-}
-
-.badge-ring text {
-  font-family: var(--font-display);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 3.1px;
-  fill: var(--carbon);
-}
-
-.badge-leaf {
-  color: var(--carbon);
-}
-
-@keyframes badge-spin {
-  to { transform: rotate(360deg); }
 }
 
 /* Indicador de scroll */
@@ -681,7 +832,7 @@ p {
   display: block;
   width: 1.5px;
   height: 44px;
-  background-color: rgba(107, 114, 104, 0.25);
+  background-color: rgba(255, 255, 255, 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -693,202 +844,12 @@ p {
   top: -40%;
   width: 100%;
   height: 40%;
-  background-color: var(--mostaza);
+  background-color: var(--mostaza-light);
   animation: scroll-drip 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes scroll-drip {
   to { top: 110%; }
-}
-
-.tag-price {
-  color: var(--mostaza-light);
-  font-weight: 700;
-  margin-left: 0.3rem;
-}
-
-/* Escenario 3D: la perspectiva vive en el contenedor padre */
-.frame-stack {
-  perspective: 1300px;
-}
-
-.carousel-frame {
-  position: relative;
-  aspect-ratio: 4 / 5;
-  touch-action: pan-y;
-  transform-style: preserve-3d;
-  transition: transform 0.35s ease-out;
-}
-
-/* Cada slide es una tarjeta enmarcada dentro de la baraja 3D */
-.carousel-slide {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 9px solid var(--blanco);
-  box-shadow: var(--shadow-elevated);
-  background-color: var(--crema-suave);
-  opacity: 0;
-  transform: translateZ(-240px) scale(0.84);
-  transition:
-    transform 0.9s cubic-bezier(0.23, 1, 0.32, 1),
-    opacity 0.9s cubic-bezier(0.23, 1, 0.32, 1),
-    filter 0.9s ease;
-  pointer-events: none;
-  backface-visibility: hidden;
-  will-change: transform, opacity;
-}
-
-.carousel-slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 7.5s cubic-bezier(0.23, 1.0, 0.32, 1);
-}
-
-.carousel-slide.is-active {
-  opacity: 1;
-  transform: none;
-  z-index: 3;
-  pointer-events: auto;
-}
-
-/* Tarjetas anterior y siguiente: asoman detrás, giradas en perspectiva */
-.carousel-slide.is-prev,
-.carousel-slide.is-next {
-  opacity: 0.6;
-  z-index: 2;
-  filter: saturate(0.8) brightness(0.95);
-}
-
-.carousel-slide.is-prev {
-  transform: translateX(-24%) translateZ(-190px) rotateY(26deg) scale(0.86);
-}
-
-.carousel-slide.is-next {
-  transform: translateX(24%) translateZ(-190px) rotateY(-26deg) scale(0.86);
-}
-
-/* En móvil el abanico se cierra un poco para no salirse de pantalla */
-@media (max-width: 560px) {
-  .carousel-slide.is-prev {
-    transform: translateX(-15%) translateZ(-190px) rotateY(24deg) scale(0.86);
-  }
-
-  .carousel-slide.is-next {
-    transform: translateX(15%) translateZ(-190px) rotateY(-24deg) scale(0.86);
-  }
-}
-
-/* Ken Burns refinado */
-@keyframes kenburns {
-  from { transform: scale(1); }
-  to { transform: scale(1.065); }
-}
-
-.carousel-slide.is-active img {
-  animation: kenburns 7.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
-}
-
-/* Overlay sutil para profundidad lujosa */
-.img-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(36, 31, 23, 0.0) 55%,
-    rgba(36, 31, 23, 0.035) 82%
-  );
-  pointer-events: none;
-}
-
-/* Etiqueta del carrusel — redisño 2026-08-13: pasó de un pill blanco tipo
-   glass a un sello sólido carbón con nombre en mayúsculas, el mismo
-   lenguaje bold/uppercase que ya llevan las tarjetas de producto
-   (§6.1 CLAUDE.md) — une visualmente el hero con el resto del catálogo. */
-.carousel-tag {
-  position: absolute;
-  z-index: 4;
-  bottom: 1.35rem;
-  left: 1.35rem;
-  background-color: var(--carbon);
-  color: var(--blanco);
-  padding: 0.55rem 1.15rem;
-  border-radius: 999px;
-  font-family: var(--font-display);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  box-shadow: 0 8px 22px rgba(36, 31, 23, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
-}
-
-.carousel-tag a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.carousel-tag:hover {
-  background-color: var(--mostaza-dark);
-  transform: translateY(-1px);
-}
-
-.carousel-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1.1rem;
-}
-
-.carousel-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 2px solid rgba(143, 111, 44, 0.5);
-  background-color: transparent;
-  color: var(--carbon);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.carousel-btn:hover {
-  background-color: var(--mostaza);
-  border-color: var(--mostaza);
-}
-
-.carousel-btn:active {
-  transform: scale(0.95);
-}
-
-.carousel-dots {
-  display: flex;
-  gap: 0.45rem;
-}
-
-.carousel-dots button {
-  width: 24px;
-  height: 5px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background-color: rgba(107, 114, 104, 0.3);
-  transition: background-color 0.25s ease, width 0.25s ease;
-}
-
-.carousel-dots button:hover {
-  background-color: var(--mostaza-light);
-}
-
-.carousel-dots button.is-active {
-  width: 38px;
-  background-color: var(--mostaza);
 }
 
 /* Marco refinado (contemporáneo) */
@@ -1092,7 +1053,8 @@ p {
   font-family: var(--font-display);
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.015em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--carbon);
   white-space: nowrap;
   transition: all 0.15s ease;
@@ -1147,6 +1109,7 @@ p {
 .filter-field select,
 .filter-field input,
 .form-field input,
+.form-field select,
 .form-field textarea {
   padding: 0.68rem 0.95rem;
   border: 1px solid rgba(107, 114, 104, 0.28);
@@ -1165,10 +1128,111 @@ p {
 .filter-field select:focus,
 .filter-field input:focus,
 .form-field input:focus,
+.form-field select:focus,
 .form-field textarea:focus {
   border-color: var(--mostaza);
   outline: none;
   box-shadow: 0 0 0 3px rgba(143, 111, 44, 0.09);
+}
+
+.form-field-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-field-row .form-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.required-mark {
+  color: var(--error-texto);
+  font-weight: 700;
+}
+
+.required-legend {
+  font-size: 0.78rem;
+  color: var(--gris-calido);
+  margin: -0.5rem 0 1.1rem;
+}
+
+/* Bloque "Entrega" — agrupa fecha/hora, delivery-o-retiro y dirección en
+   una superficie propia (fondo crema-suave), en vez de solo un label con
+   línea divisoria, para que se lea como un paso distinto del formulario
+   y no como parte del mismo muro de campos. */
+.form-section {
+  background-color: var(--crema-suave);
+  border-radius: 12px;
+  padding: 1.1rem 1.1rem 0.2rem;
+  margin: 1.5rem 0 1.1rem;
+}
+
+.form-section .form-field:last-child {
+  padding-bottom: 1.1rem;
+}
+
+.form-section-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mostaza-texto);
+  margin-bottom: 0.9rem;
+}
+
+/* Campos opcionales (dedicatoria/pago/nota) plegados por defecto: acorta
+   el formulario visible, mismo patrón de <details> que .nav-dropdown. */
+.extra-details {
+  margin: 0 0 1.4rem;
+  border-top: 1px solid rgba(107, 114, 104, 0.15);
+  border-bottom: 1px solid rgba(107, 114, 104, 0.15);
+}
+
+.extra-details summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 0.1rem;
+  font-size: 0.88rem;
+  color: var(--carbon);
+  transition: color 0.15s ease;
+}
+
+.extra-details summary:hover {
+  color: var(--mostaza-dark);
+}
+
+.extra-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.extra-details .nav-dropdown-caret {
+  flex-shrink: 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.extra-details[open] .nav-dropdown-caret {
+  transform: rotate(225deg) translateY(1px);
+}
+
+.extra-details-body {
+  padding-bottom: 1.2rem;
+}
+
+.extra-details-body .form-field:first-child {
+  margin-top: 0.2rem;
+}
+
+.form-field.invalid input,
+.form-field.invalid select,
+.form-field.invalid textarea {
+  border-color: var(--error-texto);
+  box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.09);
 }
 
 .results-count {
@@ -1316,1268 +1380,6 @@ p {
   text-decoration: line-through;
 }
 
-/* ---------- Personalizador - Luxury Vanilla Version ---------- */
-.personalizer-container {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.personalizer-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
-
-@media (min-width: 900px) {
-  .personalizer-grid {
-    grid-template-columns: 420px 1fr;
-    align-items: start;
-    gap: 2.5rem;
-  }
-}
-
-.ramo-preview {
-  height: 380px;
-  background: linear-gradient(180deg, #F5F5F3 0%, #E8E8E3 100%);
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid #E1E1DB;
-  box-shadow: 0 12px 40px rgba(36,31,23,0.12), inset 0 0 0 1px #fff;
-  position: relative;
-}
-
-#ramo-svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* Flower cards */
-#opt-flores {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
-  gap: 8px;
-}
-
-.flower-card {
-  background: #fff;
-  border: 1px solid #E1E1DB;
-  border-radius: 12px;
-  padding: 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.flower-card:hover {
-  border-color: #B8933E;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  transform: translateY(-1px);
-}
-
-.flower-shape {
-  background: #F6F6F4;
-  padding: 6px;
-  border-radius: 8px;
-  min-height: 68px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.flower-info {
-  padding: 6px 8px 4px;
-}
-
-.flower-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #241F17;
-}
-
-.flower-price {
-  font-size: 10px;
-  color: #726A57;
-}
-
-/* Color swatches */
-.color-swatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 1px #C9C9BF;
-  cursor: pointer;
-  transition: transform 0.1s;
-}
-
-.color-swatch.active {
-  box-shadow: 0 0 0 2px #B8933E;
-  transform: scale(1.1);
-}
-
-/* Qty and Add buttons */
-.pers-qty {
-  display: inline-flex;
-  align-items: center;
-  background: #F5F5F3;
-  border: 1px solid #E1E1DB;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.pers-qty button {
-  width: 23px;
-  height: 23px;
-  background: none;
-  border: none;
-  color: #B8933E;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.pers-qty button:hover {
-  background: #B8933E;
-  color: #fff;
-}
-
-.pers-add {
-  background: var(--mostaza-texto);
-  color: #fff;
-  border: none;
-  padding: 5px 13px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-.pers-add:hover {
-  background: #8F6F2C;
-  transform: translateY(-0.5px);
-}
-
-/* Wrap cards - clean and nice */
-.wrap-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #E1E1DB;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: left;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-}
-
-.wrap-option:hover {
-  border-color: #B8933E;
-  background: #F6F6F4;
-}
-
-.wrap-option.selected {
-  border-color: #B8933E;
-  background: #F6F6F4;
-  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.2);
-}
-
-.wrap-color {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  border: 1px solid #C9C9BF;
-  flex-shrink: 0;
-  box-shadow: inset 0 1px 2px rgba(255,255,255,0.5);
-}
-
-.wrap-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.wrap-name {
-  font-weight: 600;
-  font-size: 13px;
-  color: #241F17;
-  line-height: 1.2;
-}
-
-.wrap-desc {
-  font-size: 10px;
-  color: #726A57;
-  line-height: 1.3;
-  margin-top: 2px;
-}
-
-.wrap-price {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mostaza-texto);
-  margin-top: 4px;
-}
-
-#opt-wraps {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-#opt-ribbons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 4px;
-}
-
-.option-section {
-  margin-bottom: 16px;
-}
-
-.section-title {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
-  color: #241F17;
-  margin-bottom: 6px;
-}
-
-.hint {
-  font-size: 10px;
-  color: #726A57;
-  margin-top: 3px;
-}
-
-#opt-wraps, #opt-ribbons {
-  background: #fff;
-  padding: 4px;
-  border-radius: 10px;
-  border: 1px solid #E8E8E3;
-}
-
-/* Extra design for sections */
-.option-section {
-  background: #fff;
-  padding: 10px;
-  border-radius: 14px;
-  border: 1px solid #E1E1DB;
-  box-shadow: 0 1px 3px rgba(36,31,23,0.03);
-}
-
-/* Make sure all option buttons have consistent nice look */
-.wrap-option, .ribbon-option {
-  font-family: inherit;
-  font-size: inherit;
-}
-
-/* La columna del preview se queda fija mientras se recorren las opciones */
-@media (min-width: 920px) {
-  .personalizer-grid > div:first-child {
-    position: sticky;
-    top: calc(var(--header-h) + 16px);
-  }
-}
-
-/* Mini-barra móvil: ramo + precio siempre a la vista */
-.preview-minibar {
-  position: fixed;
-  top: calc(var(--header-h) + 8px);
-  left: 12px;
-  right: 12px;
-  z-index: 45;
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.5rem 0.55rem 0.5rem 1.1rem;
-  background-color: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(143, 111, 44, 0.28);
-  border-radius: 999px;
-  box-shadow: 0 8px 22px rgba(36, 31, 23, 0.16);
-  opacity: 0;
-  transform: translateY(-10px);
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.preview-minibar.show {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
-
-.preview-minibar .minibar-flowers {
-  flex: 1;
-  font-size: 0.82rem;
-  color: var(--gris-calido);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.preview-minibar strong {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--mostaza-dark);
-  white-space: nowrap;
-}
-
-.preview-minibar button {
-  border: none;
-  border-radius: 999px;
-  background-color: var(--carbon);
-  color: var(--crema);
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 0.5rem 0.95rem;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.2s ease;
-}
-
-.preview-minibar button:hover {
-  background-color: var(--mostaza-dark);
-  color: var(--blanco);
-}
-
-/* En escritorio la columna sticky hace el trabajo: la barra no hace falta */
-@media (min-width: 920px) {
-  .preview-minibar {
-    display: none;
-  }
-}
-
-/* Animación de florecimiento al agregar tallos a la vista previa */
-#flowers g.bloom {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: bloom-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes bloom-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.25) rotate(-12deg);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* Extras (chocolates, peluche, globo...) — chips seleccionables */
-#opt-extras {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-  gap: 5px;
-}
-
-.extra-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 9px 6px;
-  background: #fff;
-  border: 1px solid #E1E1DB;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-}
-
-.extra-option:hover {
-  border-color: #B8933E;
-  background: #F6F6F4;
-}
-
-.extra-option.selected {
-  border-color: #B8933E;
-  background: #F6F6F4;
-  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.2);
-}
-
-.extra-name {
-  font-weight: 600;
-  font-size: 12px;
-  text-align: center;
-  line-height: 1.25;
-}
-
-.extra-price {
-  font-size: 11px;
-  color: #726A57;
-}
-
-#dedicatoria {
-  width: 100%;
-  margin-top: 4px;
-  padding: 8px;
-  border: 1px solid #E1E1DB;
-  border-radius: 8px;
-  font-size: 14px;
-  resize: vertical;
-  min-height: 60px;
-  background: #fff;
-}
-
-#dedicatoria:focus {
-  border-color: #B8933E;
-  outline: none;
-}
-
-/* Dedicatoria textarea */
-#dedicatoria {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #E1E1DB;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 14px;
-  background: #fff;
-  resize: vertical;
-  min-height: 70px;
-  transition: border-color 0.15s;
-}
-
-#dedicatoria:focus {
-  outline: none;
-  border-color: #B8933E;
-  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.1);
-}
-
-/* Ribbon options - small nice buttons */
-.ribbon-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 4px;
-  background: #fff;
-  border: 1px solid #E1E1DB;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-  min-width: 0;
-  height: 68px;
-  justify-content: center;
-}
-
-.ribbon-option:hover {
-  border-color: #B8933E;
-  background: #F6F6F4;
-}
-
-.ribbon-option.selected {
-  border-color: #B8933E;
-  background: #F6F6F4;
-  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.2);
-}
-
-.ribbon-color {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid #C9C9BF;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.5);
-}
-
-.ribbon-name {
-  font-size: 9px;
-  color: #241F17;
-  text-align: center;
-  line-height: 1.1;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-
-.ribbon-price {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--mostaza-texto);
-  margin-top: 1px;
-}
-
-/* Wrap and ribbon buttons */
-#opt-wraps button, #opt-ribbons button {
-  transition: all 0.15s ease;
-  text-align: left;
-}
-
-#opt-wraps button:hover, #opt-ribbons button:hover {
-  border-color: #B8933E;
-}
-
-/* Summary */
-#selection-summary {
-  font-size: 11px;
-  line-height: 1.3;
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-}
-
-.selection-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 9px;
-  background: #fff;
-  border: 1px solid #E1E1DB;
-  border-radius: 999px;
-  font-size: 10px;
-  line-height: 1.2;
-  color: #241F17;
-  white-space: nowrap;
-}
-
-.selection-chip.wrap,
-.selection-chip.ribbon {
-  padding-left: 7px;
-  padding-right: 7px;
-}
-
-/* ============ Personalizador - Diseño Excelente y Lujoso ============ */
-.personalizer-container {
-  max-width: 1080px;
-  margin: 0 auto;
-}
-
-.personalizer-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2.25rem;
-}
-
-@media (min-width: 920px) {
-  .personalizer-grid {
-    grid-template-columns: 400px 1fr;
-    gap: 2.75rem;
-    align-items: start;
-  }
-}
-
-/* Beautiful Premium Preview */
-.ramo-preview {
-  height: 408px;
-  background: linear-gradient(178deg, #F6F6F4 0%, #E8E8E3 100%);
-  border-radius: 22px;
-  overflow: hidden;
-  border: 1px solid #E4E4DE;
-  box-shadow: 
-    0 18px 48px rgba(36, 31, 23, 0.13),
-    0 6px 14px rgba(36, 31, 23, 0.07),
-    inset 0 1px 0 rgba(255,255,255,0.9),
-    inset 0 0 0 1px #fff;
-  position: relative;
-}
-
-/* Elegant studio frame inside preview */
-.ramo-preview::after {
-  content: "";
-  position: absolute;
-  inset: 7px;
-  border-radius: 15px;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
-  pointer-events: none;
-}
-
-#ramo-svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* Flower selection cards - luxurious refined */
-#opt-flores {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 10px;
-}
-
-#opt-flores .flower-card {
-  background: #fff;
-  border: 1px solid #E4E4DE;
-  border-radius: 15px;
-  overflow: hidden;
-  box-shadow: 0 3px 9px rgba(36,31,23,0.06), 0 1px 2px rgba(0,0,0,0.02);
-  transition: transform 0.2s cubic-bezier(0.23,1,0.32,1), box-shadow 0.2s ease, border-color 0.2s ease;
-  cursor: pointer;
-}
-
-#opt-flores .flower-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 30px rgba(36,31,23,0.12), 0 3px 7px rgba(0,0,0,0.04);
-  border-color: #B8933E;
-}
-
-#opt-flores .flower-shape {
-  background: #F6F6F4;
-  padding: 10px 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 86px;
-  position: relative;
-}
-
-/* Very subtle color wash behind flower preview in card */
-#opt-flores .flower-card .flower-shape::after {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 45% 35%, rgba(143,111,44,0.045) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.flower-info {
-  padding: 8px 10px 10px;
-}
-
-.flower-name {
-  font-weight: 600;
-  font-size: 13px;
-  color: #241F17;
-}
-
-.flower-price {
-  font-size: 10px;
-  color: #726A57;
-  margin-top: 1px;
-}
-
-/* Color swatches in cards */
-.color-swatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1.5px solid #fff;
-  box-shadow: 0 0 0 1px #C9C9BF;
-  cursor: pointer;
-  transition: transform 0.1s ease;
-}
-
-.color-swatch.active {
-  box-shadow: 0 0 0 2px #B8933E, 0 0 0 3px #fff;
-  transform: scale(1.1);
-}
-
-.color-swatch {
-  position: relative;
-}
-
-.swatch-count {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 3px;
-  border-radius: 999px;
-  background: var(--carbon);
-  color: var(--crema);
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 15px;
-  text-align: center;
-  box-shadow: 0 0 0 1.5px var(--blanco);
-}
-
-.flower-total-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--mostaza);
-  color: var(--blanco);
-  font-size: 10px;
-  font-weight: 700;
-  vertical-align: middle;
-}
-
-/* ---------- Plantillas rápidas del personalizador ---------- */
-.presets-row {
-  margin-bottom: 1.1rem;
-}
-
-.presets-label {
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--gris-calido);
-  margin-bottom: 0.4rem;
-}
-
-.presets-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.preset-chip {
-  padding: 0.45rem 0.95rem;
-  background: var(--blanco);
-  border: 1.5px solid var(--mostaza-light);
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--mostaza-dark);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.preset-chip:hover {
-  background: var(--mostaza);
-  border-color: var(--mostaza);
-  color: var(--blanco);
-}
-
-/* ---------- Encabezado de sección con acción y progreso de tallos ---------- */
-.section-title-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 8px;
-}
-
-.link-reset {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--gris-calido);
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.link-reset:hover {
-  color: var(--mostaza-dark);
-}
-
-.stems-progress {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin-bottom: 4px;
-}
-
-.stems-progress-track {
-  flex: 1;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--crema-suave);
-  overflow: hidden;
-}
-
-.stems-progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--mostaza-light), var(--mostaza));
-  transition: width 0.3s ease;
-  width: 0%;
-}
-
-.stems-progress-label {
-  flex-shrink: 0;
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: var(--gris-calido);
-  white-space: nowrap;
-}
-
-/* Summary box - refined luxury */
-.summary-box {
-  background: #fff;
-  border-radius: 18px;
-  border: 1px solid #E4E4DE;
-  padding: 16px 18px;
-  box-shadow: 0 6px 22px rgba(36,31,23,0.07);
-  margin-top: 12px;
-}
-
-.summary-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-.summary-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #726A57;
-  margin-bottom: 1px;
-}
-
-.summary-count {
-  font-family: var(--font-display);
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.summary-price-wrap {
-  text-align: right;
-}
-
-.summary-price {
-  font-family: var(--font-display);
-  font-size: 24px;
-  color: #B8933E;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.summary-price {
-  font-family: var(--font-display);
-  font-size: 23px;
-  font-weight: 700;
-  color: #B8933E;
-}
-
-/* Section headers */
-.section-title {
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
-  color: #241F17;
-  margin-bottom: 8px;
-}
-
-.flower-shape {
-  width: 70px;
-  height: 70px;
-  margin: 0 auto;
-  position: relative;
-}
-
-.flower-shape svg {
-  width: 100%;
-  height: 100%;
-}
-
-.qty-stepper {
-  display: inline-flex;
-  align-items: center;
-  background: #F5F5F3;
-  border-radius: 999px;
-  border: 1px solid #E1E1DB;
-}
-
-.qty-stepper button {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: #B8933E;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.qty-stepper span {
-  min-width: 28px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.builder-intro {
-  font-size: 0.92rem;
-  color: var(--gris-calido);
-  margin-bottom: 1.35rem;
-  max-width: 46ch;
-}
-
-.builder-form legend {
-  font-family: var(--font-display);
-  font-size: 1.45rem;
-  font-weight: 600;
-  margin-bottom: 0.9rem;
-  padding: 0;
-}
-
-.legend-hint {
-  display: block;
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  color: var(--gris-calido);
-  font-weight: 400;
-  margin-top: 0.15rem;
-}
-
-.option-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.7rem;
-}
-
-/* Mejor disposición para Tamaños (3 opciones) - limpio y horizontal */
-#opt-tamano {
-  display: flex;
-  gap: 0.6rem;
-}
-
-#opt-tamano .option-card {
-  flex: 1;
-  min-width: 0;
-}
-
-.option-card {
-  position: relative;
-  display: block;
-  cursor: pointer;
-}
-
-.option-card input {
-  position: absolute;
-  opacity: 0;
-  inset: 0;
-}
-
-.option-card .option-body {
-  border: 1px solid rgba(107, 114, 104, 0.2);
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  background-color: var(--blanco);
-  transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
-}
-
-.option-card:hover .option-body {
-  border-color: var(--mostaza);
-  transform: translateY(-1px);
-}
-
-.option-card input:checked + .option-body {
-  border-color: var(--mostaza);
-  background-color: #F5F5F3;
-  box-shadow: 0 1px 0 rgba(143, 111, 44, 0.12);
-}
-
-/* (Duplicate legacy personalizer styles removed — main rules live above) */
-
-.option-card input:focus-visible + .option-body {
-  outline: 3px solid var(--mostaza);
-  outline-offset: 2px;
-}
-
-.option-name {
-  display: block;
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.option-meta {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--gris-calido);
-  margin-top: 0.15rem;
-}
-
-/* Swatches de color de flores */
-.swatch-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.swatch {
-  position: relative;
-  cursor: pointer;
-  text-align: center;
-  background: var(--blanco);
-  border: 1px solid rgba(107, 114, 104, 0.2);
-  border-radius: 10px;
-  padding: 0.6rem 0.7rem 0.5rem;
-  min-width: 68px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.swatch:hover {
-  border-color: var(--mostaza-light);
-}
-
-.swatch input {
-  position: absolute;
-  opacity: 0;
-  inset: 0;
-}
-
-.swatch .dot {
-  display: block;
-  width: 46px;
-  height: 46px;
-  border-radius: 999px;
-  border: 3px solid var(--blanco);
-  box-shadow: 0 0 0 1px rgba(107, 114, 104, 0.25), 0 2px 5px rgba(36,31,23,0.1);
-  margin: 0 auto 0.35rem;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.swatch input:checked ~ .dot {
-  box-shadow: 0 0 0 3px var(--mostaza), 0 4px 10px rgba(143, 111, 44, 0.3);
-  transform: scale(1.03);
-}
-
-.swatch input:checked + .dot ~ .swatch-name,
-.swatch input:checked ~ .swatch-name {
-  color: var(--carbon);
-  font-weight: 600;
-}
-
-.swatch input:focus-visible ~ .dot {
-  outline: 3px solid var(--mostaza);
-  outline-offset: 3px;
-}
-
-.swatch .swatch-name {
-  font-size: 0.72rem;
-  color: var(--gris-calido);
-  display: block;
-  line-height: 1.1;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 1.2rem;
-}
-
-.form-field label {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.form-field textarea {
-  resize: vertical;
-  min-height: 90px;
-}
-
-.char-hint {
-  font-size: 0.78rem;
-  color: var(--gris-calido);
-}
-
-/* Resumen del ramo - Panel lujoso */
-.builder-summary {
-  background-color: var(--blanco);
-  border-radius: var(--radius);
-  border: 1px solid rgba(143, 111, 44, 0.1);
-  box-shadow: var(--shadow-elevated);
-  padding: 1.5rem 1.5rem 1.85rem;
-}
-
-.builder-summary h2 {
-  font-size: 1.45rem;
-  margin-bottom: 1.35rem;
-  letter-spacing: -0.01em;
-}
-
-.summary-lines {
-  list-style: none;
-  margin: 0 0 1.35rem;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  font-size: 0.92rem;
-}
-
-.summary-lines li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--gris-calido);
-  padding-bottom: 0.15rem;
-}
-
-.summary-lines li span:last-child {
-  font-weight: 600;
-  color: var(--carbon);
-  white-space: nowrap;
-  font-family: var(--font-display);
-}
-
-.summary-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  border-top: 1px solid rgba(107, 114, 104, 0.15);
-  padding-top: 1.15rem;
-  margin-bottom: 1.5rem;
-}
-
-.summary-total .label {
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.summary-total .amount {
-  font-family: var(--font-display);
-  font-size: 2.05rem;
-  font-weight: 700;
-  color: var(--mostaza-dark);
-  letter-spacing: -0.02em;
-}
-
-/* ---------- Vista previa del ramo - Lujosa y representativa ---------- */
-.preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.65rem;
-}
-
-.preview-header h2 {
-  font-size: 0.85rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--gris-calido);
-  font-family: var(--font-body);
-  margin: 0;
-}
-
-.preview-label {
-  font-size: 0.72rem;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--crema-suave);
-  color: var(--mostaza-dark);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-/* (Legacy non-SVG preview styles removed) */
-
-/* Contenedor de flores - relative para posicionamiento absoluto */
-/* Ya no usamos este contenedor para divs, el SVG maneja todo */
-.preview-flowers {
-  display: none;
-}
-
-/* Cada flor - posicionadas absolutamente para bouquet */
-.preview-flower {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  background: #D9C08A;
-  border-radius: 50%;
-  border: 2.5px solid #fff;
-  box-shadow: 0 4px 8px rgba(36,31,23,0.18);
-  transition: all 0.3s cubic-bezier(0.23,1,0.32,1);
-  display: block;
-}
-
-/* Reglas especiales de forma para cada tipo de flor (se aplican encima del color) */
-.preview-flower.rosa {
-  box-shadow: 0 4px 8px rgba(36,31,23,0.2), inset 0 5px 7px rgba(255,255,255,0.4);
-}
-.preview-flower.rosa::after {
-  content: '';
-  position: absolute; inset: 5px;
-  background: rgba(255,255,255,0.3);
-  border-radius: 50%;
-}
-
-.preview-flower.girasol {
-  box-shadow: 0 4px 8px rgba(36,31,23,0.2);
-  border-color: #f4e9c8;
-}
-.preview-flower.girasol::after {
-  content: '';
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-  width: 10px; height: 10px;
-  background: #5c4326;
-  border-radius: 50%;
-  box-shadow: 0 0 0 4px #f4d17a;
-}
-
-.preview-flower.lirio {
-  width: 24px; height: 32px;
-  border-radius: 40% 40% 55% 55%;
-}
-
-.preview-flower.astromelia {
-  width: 20px; height: 20px;
-}
-.preview-flower.astromelia::after {
-  content: '✦';
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-  font-size: 9px; color: #fff; opacity: 0.6;
-}
-
-.preview-flower.mixto {
-  border-color: #f8f1e4;
-}
-
-/* Variantes según tipo de flor - las formas se aplican encima del color elegido */
-.preview-flower.rosa {
-  width: 28px; height: 28px;
-  box-shadow: 0 2px 6px rgba(36,31,23,0.18), inset 0 4px 6px rgba(255,255,255,0.35);
-}
-.preview-flower.rosa::after {
-  content: '';
-  position: absolute; inset: 4px;
-  background: rgba(255,255,255,0.28);
-  border-radius: 50%;
-}
-
-.preview-flower.girasol {
-  width: 30px; height: 30px;
-  box-shadow: 0 2px 6px rgba(36,31,23,0.2);
-  border: 2px solid #f4e9c8;
-}
-.preview-flower.girasol::after {
-  content: '';
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-  width: 9px; height: 9px;
-  background: #5f4528;
-  border-radius: 50%;
-  box-shadow: 0 0 0 3.5px #f4d17a;
-}
-
-.preview-flower.lirio {
-  width: 22px; height: 30px;
-  border-radius: 38% 38% 48% 48%;
-  /* No forzamos background aquí para que use el color elegido + filtro si aplica */
-}
-
-.preview-flower.astromelia {
-  width: 18px; height: 18px;
-  box-shadow: 0 1px 4px rgba(36,31,23,0.12);
-}
-.preview-flower.astromelia::after {
-  content: '✦';
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-  font-size: 8px; color: #fff; opacity: 0.65;
-}
-
-.preview-flower.mixto {
-  border: 2px solid #f8f1e4;
-}
-
-/* Ajustes de disposición para que se vea como un bouquet */
-.preview-flowers .preview-flower:nth-child(2) { transform: translateY(-5px) scale(1.05); }
-.preview-flowers .preview-flower:nth-child(3) { transform: translateY(2px); }
-.preview-flowers .preview-flower:nth-child(4) { transform: translateY(-2px) scale(0.92); }
-
 /* ---------- Carrito ---------- */
 .cart-layout {
   display: grid;
@@ -2585,27 +1387,40 @@ p {
   align-items: start;
 }
 
+/* Rediseño 2026-08-22: antes cada .cart-item era su propia tarjeta blanca
+   con sombra (N cajas flotantes apiladas, "muro" repetitivo). Ahora
+   .cart-items es UNA sola tarjeta contenedora y cada item es una fila
+   separada por un borde inferior — se lee como un recibo/lista de pedido,
+   no como una pila de componentes sueltos. */
 .cart-items {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  background-color: var(--blanco);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
 }
 
 .cart-item {
   display: grid;
-  grid-template-columns: 84px 1fr auto;
-  gap: 1rem;
+  grid-template-columns: 92px 1fr auto;
+  gap: 1.15rem;
   align-items: center;
-  background-color: var(--blanco);
-  border-radius: var(--radius);
-  padding: 1rem;
-  box-shadow: var(--shadow-soft);
+  padding: 1.2rem 1.3rem;
+  border-bottom: 1px solid rgba(107, 114, 104, 0.14);
+  transition: background-color 0.15s ease;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.cart-item:hover {
+  background-color: var(--crema-suave);
 }
 
 .cart-item .item-img {
-  width: 84px;
-  height: 100px;
-  border-radius: 42px 42px 10px 10px;
+  width: 92px;
+  height: 108px;
+  border-radius: var(--arch);
   overflow: hidden;
   background-color: var(--crema-suave);
   display: flex;
@@ -2634,13 +1449,21 @@ p {
 .item-unit {
   font-size: 0.85rem;
   color: var(--gris-calido);
-  margin: 0;
+  margin: 0 0 0.45rem;
 }
 
 .item-code {
+  display: inline-block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--mostaza-texto);
+  background-color: var(--crema-suave);
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+}
+
+.cart-item:hover .item-code {
+  background-color: var(--blanco);
 }
 
 .item-side {
@@ -2655,16 +1478,19 @@ p {
 }
 
 .remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   border: none;
   background: none;
   color: var(--gris-calido);
   font-size: 0.8rem;
-  text-decoration: underline;
   padding: 0.2rem;
+  transition: color 0.15s ease;
 }
 
 .remove-btn:hover {
-  color: #B3423A;
+  color: var(--error-texto);
 }
 
 .cart-item .qty-stepper button {
@@ -2746,6 +1572,31 @@ p {
   display: grid;
   gap: clamp(28px, 5vw, 64px);
   align-items: center;
+}
+
+/* ---------- Contacto rápido (home, WhatsApp + Instagram) ---------- */
+.newsletter-band {
+  background-color: var(--crema-suave);
+}
+
+.newsletter-grid {
+  display: grid;
+  gap: clamp(28px, 5vw, 56px);
+}
+
+@media (min-width: 720px) {
+  .newsletter-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.newsletter-grid h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.newsletter-grid p {
+  margin-bottom: 1.3rem;
 }
 
 .about-grid .arch-img {
@@ -3045,6 +1896,192 @@ p {
   margin-inline: auto;
   color: var(--gris-calido);
   font-size: 1.01rem;
+}
+
+/* ---------- Portada de categoría (categoria.html?slug=) ----------
+   Rediseño 2026-08-22 (v4): a pedido de la clienta, foto de portada a
+   banner completo (sin marco/tarjeta ni blob dorado detrás — "la
+   imagen de portada todo atrás"), con el texto centrado encima, igual
+   al banner "ELEGANCIA FLORAL" de la referencia visual que mandó. Si
+   la categoría no tiene imagen_portada, el fondo cae al degradado
+   dorado con textura (--gold-shine/--gold-brushed) de siempre. */
+.cat-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(340px, 46vw, 480px);
+  background-size: cover;
+  background-position: center;
+  background-image: var(--gold-brushed), var(--gold-shine);
+  isolation: isolate;
+}
+
+.cat-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 16, 10, 0.35) 0%, rgba(20, 16, 10, 0.4) 55%, rgba(20, 16, 10, 0.6) 100%);
+}
+
+.cat-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  text-align: center;
+}
+
+.cat-hero-copy .eyebrow {
+  background-color: var(--blanco);
+  color: var(--carbon);
+}
+
+.cat-hero-copy .eyebrow::before {
+  background-color: var(--mostaza-dark);
+}
+
+.cat-hero-copy h1 {
+  color: var(--blanco);
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  text-wrap: balance;
+  text-shadow: 0 4px 26px rgba(0, 0, 0, 0.35);
+  margin-block: 0.9rem 1rem;
+}
+
+.cat-hero-copy p {
+  max-width: 48ch;
+  margin-inline: auto;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.03rem;
+  line-height: 1.55;
+}
+
+/* ---------- Franja de información (home, debajo del hero) ---------- */
+.info-strip {
+  background-color: var(--crema-suave);
+  border-bottom: 1px solid rgba(143, 111, 44, 0.1);
+}
+
+.info-strip-inner {
+  display: grid;
+  gap: 1.75rem;
+  padding-block: 1.75rem;
+}
+
+@media (min-width: 720px) {
+  .info-strip-inner {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.info-strip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.info-strip-item svg {
+  flex-shrink: 0;
+  color: var(--mostaza-dark);
+  margin-top: 0.15rem;
+}
+
+.info-strip-item h3 {
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+
+.info-strip-item p {
+  color: var(--gris-calido);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.info-strip-item p a {
+  color: var(--mostaza-dark);
+  font-weight: 700;
+}
+
+/* ---------- Grilla de categorías (home, #home-category-grid) ----------
+   Entrada de navegación a las páginas categoria.html?slug=X. Rediseño
+   2026-08-21 (v3, "Elegancia Floral"): antes el nombre flotaba en un
+   sello sobre la foto (v2); ahora, a pedido de la clienta (referencia
+   visual), pasa a tarjeta clásica de catálogo — foto arriba, nombre
+   serif + descripción corta + botón "Ver más" debajo, sobre --blanco.
+   La descripción por categoría vive en CATEGORY_DESCRIPTIONS dentro de
+   js/productos.js (texto editorial, no en la base de datos todavía). */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 28px;
+}
+
+.category-card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--blanco);
+  transition: transform 0.3s ease;
+}
+
+.category-card:hover,
+.category-card:focus-visible {
+  transform: translateY(-4px);
+}
+
+.category-card-img {
+  display: block;
+  position: relative;
+  /* 2026-08-22: 4/3 en vez de 4/5 — las fotos de portada nuevas son
+     horizontales (16:9), un marco más vertical recortaría demasiado
+     las composiciones de varios arreglos en fila. */
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.category-card-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-image: var(--gold-brushed), var(--gold-shine);
+  transform: scale(1.02);
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.category-card:hover .category-card-bg,
+.category-card:focus-visible .category-card-bg {
+  transform: scale(1.08);
+}
+
+.category-card-body {
+  padding-top: 1.1rem;
+  text-align: center;
+}
+
+.category-card-body h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.category-card-body h3 a {
+  color: inherit;
+}
+
+.category-card-body p {
+  color: var(--gris-calido);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  min-height: 2.6em;
+}
+
+.category-card-body .btn {
+  padding: 0.55rem 1.5rem;
+  font-size: 0.72rem;
 }
 
 /* ---------- Iconos de redes sociales (solo ícono) ---------- */
@@ -3381,28 +2418,9 @@ p {
   }
 }
 
-/* En pantallas pequeñas el sello se reduce y el titular respira */
-@media (max-width: 819px) {
-  .hero-badge {
-    width: 90px;
-    height: 90px;
-    top: -30px;
-    left: -8px;
-  }
-
-  .badge-ring text {
-    font-size: 11.5px;
-    letter-spacing: 2.6px;
-  }
-}
-
 @media (max-width: 560px) {
   .hero-copy h1 {
     font-size: clamp(2rem, 8.6vw, 2.5rem);
-  }
-
-  .hero-watermark {
-    top: 8px;
   }
 }
 
@@ -3411,16 +2429,10 @@ p {
   /* El hero ocupa la primera pantalla completa */
   .hero {
     min-height: calc(100dvh - var(--header-h));
-    display: flex;
-    align-items: center;
   }
 
   .hero-scroll {
     display: flex;
-  }
-
-  .hero-grid {
-    grid-template-columns: 1.05fr 0.95fr;
   }
 
   .product-layout {
@@ -3488,6 +2500,30 @@ p {
 
   .site-nav a[aria-current="page"] {
     background-color: var(--crema-suave);
+  }
+
+  .nav-dropdown summary {
+    padding: 0.85rem 6%;
+    font-size: 1rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--carbon);
+  }
+
+  .nav-dropdown summary::before {
+    display: none;
+  }
+
+  .nav-dropdown-panel {
+    position: static;
+    transform: none;
+    width: auto;
+    margin: 0 6% 0.5rem;
+    grid-template-columns: 1fr;
+    box-shadow: none;
+    border: 1px solid rgba(143, 111, 44, 0.18);
   }
 }
 

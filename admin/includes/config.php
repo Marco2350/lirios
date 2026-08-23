@@ -10,7 +10,7 @@
 
 define('ADMIN_PASSWORD_HASH', '$2y$10$TvxGpGaHB37/aBhPEyOH1uFcYu/5isbqYer2ewJUOA7cOn7bMwnaa');
 
-// Conexión PDO a MySQL (fuente de verdad del catálogo y la personalización)
+// Conexión PDO a MySQL (fuente de verdad del catálogo)
 require_once dirname(__DIR__, 2) . '/config/db.php';
 
 // Carpeta de imágenes de producto

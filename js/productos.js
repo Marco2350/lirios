@@ -48,7 +48,6 @@ function precioTexto(producto) {
 }
 
 function productCardHtml(producto) {
-  const etiqueta = producto.subcategoria?.nombre || producto.categoria?.nombre || '';
   const variantesDisponibles = (producto.variantes || []).filter((v) => v.disponible);
   const variantePorDefecto = variantesDisponibles[0] || null;
   const mostrarTallas = variantesDisponibles.length > 1;
@@ -58,7 +57,6 @@ function productCardHtml(producto) {
     <a class="card-img" href="producto.html?id=${encodeURIComponent(producto.slug)}" aria-label="Ver ${escapeHtml(producto.nombre)}">
       <img src="${escapeHtml(producto.imagen || 'images/logo.png')}" alt="${escapeHtml(producto.nombre)}" loading="lazy">
     </a>
-    <p class="card-occasion">${escapeHtml(etiqueta)}</p>
     <h3><a href="producto.html?id=${encodeURIComponent(producto.slug)}">${escapeHtml(producto.nombre)}</a></h3>
     <p class="card-price" data-card-price>${variantePorDefecto ? formatPrice(variantePorDefecto.precio) : precioTexto(producto)}</p>
     ${
@@ -141,6 +139,53 @@ function wireAddButtons(contenedor, productos) {
   });
 }
 
+/* ---------- Grilla de categorías (index.html) ----------
+   Descripciones cortas editoriales — texto propio, no viene de la base
+   de datos todavía (las categorías solo tienen nombre/portada en MySQL).
+   Si se agrega un campo "descripción" a /admin/categorias.php más
+   adelante, este mapa se puede reemplazar por el dato real de la API. */
+const CATEGORY_DESCRIPTIONS = {
+  'ramos-florales': 'Diseños únicos para cada ocasión especial.',
+  'arreglos-en-base': 'Elegancia y frescura en cada composición.',
+  'cumpleanos': 'Alegría y color para celebrar en grande.',
+  'caballero': 'Detalles con estilo, pensados para él.',
+  'infantil': 'Ternura y color para los más pequeños.',
+  'desayuno-sorpresa': 'Empieza el día con una sorpresa especial.',
+  'aniversario': 'Para celebrar el amor que perdura.',
+  'chocolates-perfumes-complementos': 'Chocolates, peluches y detalles que enamoran.',
+  'graduaciones': 'Para celebrar cada logro con flores.',
+  'bodas': 'Flores que acompañan tu gran día.',
+  'funebres': 'Acompañamos con respeto y sensibilidad.',
+  'flores-preservadas': 'Belleza floral que dura para siempre.',
+  'globos': 'Sorprende con flores y globos personalizados.',
+};
+
+async function initCategoryGrid() {
+  const grid = document.getElementById('home-category-grid');
+  if (!grid) return;
+  // Las categorías huérfanas (orden 90+, ver schema.sql) no se muestran
+  // en la grilla del home — filtrar por orden real en vez de cortar en un
+  // número fijo, porque la cantidad de categorías vigentes puede cambiar.
+  const categorias = (await loadCategorias()).filter((c) => c.orden < 90);
+  grid.innerHTML = categorias
+    .map((c) => {
+      const bg = c.imagenPortada ? ` style="background-image: url('${c.imagenPortada}')"` : '';
+      const href = `categoria.html?slug=${encodeURIComponent(c.slug)}`;
+      const descripcion = CATEGORY_DESCRIPTIONS[c.slug] || 'Descubre esta colección.';
+      return `<article class="category-card">
+        <a class="category-card-img" href="${href}" aria-label="Ver ${escapeHtml(c.nombre)}">
+          <span class="category-card-bg"${bg}></span>
+        </a>
+        <div class="category-card-body">
+          <h3><a href="${href}">${escapeHtml(c.nombre)}</a></h3>
+          <p>${escapeHtml(descripcion)}</p>
+          <a class="btn" href="${href}">Ver más</a>
+        </div>
+      </article>`;
+    })
+    .join('');
+}
+
 /* ---------- Destacados (index.html) ---------- */
 
 async function initFeatured() {
@@ -160,7 +205,6 @@ async function initCatalog() {
   if (!grid) return;
 
   const chipsWrap = document.getElementById('category-chips');
-  const selSubcategoria = document.getElementById('filter-subcategoria');
   const selOrden = document.getElementById('sort-precio');
   const inputBusqueda = document.getElementById('search-input');
   const countEl = document.getElementById('results-count');
@@ -185,26 +229,10 @@ async function initCatalog() {
   }
   renderChips();
 
-  function poblarSubcategorias() {
-    const cat = categorias.find((c) => c.slug === categoriaActual);
-    selSubcategoria.innerHTML = '<option value="">Todas las subcategorías</option>';
-    selSubcategoria.disabled = !cat;
-    if (cat) {
-      cat.subcategorias.forEach((s) => {
-        selSubcategoria.insertAdjacentHTML(
-          'beforeend',
-          `<option value="${escapeHtml(s.slug)}">${escapeHtml(s.nombre)}</option>`
-        );
-      });
-    }
-  }
-  poblarSubcategorias();
-
   async function render() {
     countEl.textContent = 'Buscando arreglos…';
     const productos = await loadProductos({
       categoria: categoriaActual,
-      subcategoria: selSubcategoria.value,
       orden: selOrden.value,
       q: inputBusqueda?.value.trim() || '',
     });
@@ -215,7 +243,7 @@ async function initCatalog() {
 
     grid.innerHTML =
       productos.length === 0
-        ? '<p class="empty-msg">No encontramos arreglos con esos filtros. Prueba con otra combinación o <a href="personalizar.html">crea tu propio ramo</a>.</p>'
+        ? '<p class="empty-msg">No encontramos arreglos con esos filtros. Prueba con otra combinación.</p>'
         : productos.map(productCardHtml).join('');
     revealNow(grid);
     wireTallaChips(grid);
@@ -227,10 +255,77 @@ async function initCatalog() {
     if (!btn) return;
     categoriaActual = btn.dataset.categoria;
     renderChips();
-    poblarSubcategorias();
     render();
   });
-  selSubcategoria.addEventListener('change', render);
+  selOrden.addEventListener('change', render);
+
+  let busquedaTimer = null;
+  inputBusqueda?.addEventListener('input', () => {
+    clearTimeout(busquedaTimer);
+    busquedaTimer = setTimeout(render, 300);
+  });
+
+  render();
+}
+
+/* ---------- Página de categoría (categoria.html?slug=) ---------- */
+
+async function initCategoryPage() {
+  const grid = document.getElementById('category-grid');
+  if (!grid) return;
+
+  const heroEl = document.getElementById('category-hero');
+  const eyebrowEl = document.getElementById('category-eyebrow');
+  const titleEl = document.getElementById('category-title');
+  const descEl = document.getElementById('category-desc');
+  const selOrden = document.getElementById('sort-precio');
+  const inputBusqueda = document.getElementById('search-input');
+  const countEl = document.getElementById('results-count');
+
+  const slug = new URLSearchParams(window.location.search).get('slug') || '';
+  const categorias = await loadCategorias();
+  const categoria = categorias.find((c) => c.slug === slug);
+
+  if (!categoria) {
+    titleEl.textContent = 'Categoría no encontrada';
+    descEl.textContent = '';
+    const filterBar = document.querySelector('.filter-bar');
+    if (filterBar) filterBar.style.display = 'none';
+    grid.innerHTML = `
+      <p class="empty-msg">Esta categoría ya no existe o el enlace es incorrecto.
+        <a href="catalogo.html">Ver el catálogo completo</a>.
+      </p>`;
+    return;
+  }
+
+  document.title = `${categoria.nombre} — LIRIOS Floristería`;
+  eyebrowEl.textContent = 'Colección';
+  titleEl.textContent = categoria.nombre;
+  descEl.textContent = 'Hechos a mano con flores frescas de temporada. Pide por WhatsApp.';
+  if (categoria.imagenPortada) {
+    heroEl.style.backgroundImage = `url('${categoria.imagenPortada}')`;
+  }
+
+  async function render() {
+    countEl.textContent = 'Buscando arreglos…';
+    const productos = await loadProductos({
+      categoria: slug,
+      orden: selOrden.value,
+      q: inputBusqueda?.value.trim() || '',
+    });
+
+    countEl.textContent =
+      productos.length === 1 ? '1 arreglo encontrado' : `${productos.length} arreglos encontrados`;
+
+    grid.innerHTML =
+      productos.length === 0
+        ? `<p class="empty-msg">Todavía no hay arreglos publicados en ${escapeHtml(categoria.nombre)}. Prueba con otra categoría.</p>`
+        : productos.map(productCardHtml).join('');
+    revealNow(grid);
+    wireTallaChips(grid);
+    wireAddButtons(grid, productos);
+  }
+
   selOrden.addEventListener('change', render);
 
   let busquedaTimer = null;
@@ -405,6 +500,8 @@ function reportarErrorCarga(contenedorId) {
   }
 }
 
+initCategoryGrid().catch(() => reportarErrorCarga('home-category-grid'));
 initFeatured().catch(() => reportarErrorCarga('featured-grid'));
 initCatalog().catch(() => reportarErrorCarga('catalog-grid'));
+initCategoryPage().catch(() => reportarErrorCarga('category-grid'));
 initProductDetail().catch(() => reportarErrorCarga('product-content'));
