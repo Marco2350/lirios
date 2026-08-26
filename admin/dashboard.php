@@ -31,7 +31,7 @@ $pedidosRecientes = db()->query(
 $accesos = [
     ['pedidos.php', 'pedidos', 'Pedidos', 'Estado de cada pedido enviado por WhatsApp'],
     ['reportes.php', 'reportes', 'Reportes', 'Ventas por día, semana y mes'],
-    ['productos.php', 'productos', 'Productos', 'Catálogo, tallas y precios'],
+    ['productos.php', 'productos', 'Productos', 'Catálogo y precios'],
     ['categorias.php', 'categorias', 'Categorías', 'Taxonomía del catálogo'],
     ['subir-imagen.php', 'imagenes', 'Imágenes', 'Fotos disponibles para el catálogo'],
 ];

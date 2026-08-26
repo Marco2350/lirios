@@ -6,7 +6,7 @@
    - Detalle de producto        (#product-content, ?id=slug)
    ========================================================= */
 
-import { addToCart, formatPrice, escapeHtml, showToast } from './cart.js';
+import { addToCart, formatPrice, escapeHtml, showToast, codigoRamo } from './cart.js';
 
 let categoriasCache = null;
 let productosCache = null;
@@ -42,62 +42,21 @@ async function loadProductoDetalle(slug) {
 
 /* ---------- Tarjetas de producto ---------- */
 
-function precioTexto(producto) {
-  if (producto.precioDesde == null) return 'Precio a consultar';
-  return formatPrice(producto.precioDesde);
-}
-
 function productCardHtml(producto) {
-  const variantesDisponibles = (producto.variantes || []).filter((v) => v.disponible);
-  const variantePorDefecto = variantesDisponibles[0] || null;
-  const mostrarTallas = variantesDisponibles.length > 1;
+  const codigo = codigoRamo(`p-${producto.slug}`);
 
   return `
   <article class="product-card reveal" data-slug="${escapeHtml(producto.slug)}">
     <a class="card-img" href="producto.html?id=${encodeURIComponent(producto.slug)}" aria-label="Ver ${escapeHtml(producto.nombre)}">
       <img src="${escapeHtml(producto.imagen || 'images/logo.png')}" alt="${escapeHtml(producto.nombre)}" loading="lazy">
     </a>
-    <h3><a href="producto.html?id=${encodeURIComponent(producto.slug)}">${escapeHtml(producto.nombre)}</a></h3>
-    <p class="card-price" data-card-price>${variantePorDefecto ? formatPrice(variantePorDefecto.precio) : precioTexto(producto)}</p>
-    ${
-      mostrarTallas
-        ? `<div class="card-tallas" role="group" aria-label="Elegir talla">
-            ${variantesDisponibles
-              .map(
-                (v, i) => `
-              <button type="button" class="talla-chip ${i === 0 ? 'selected' : ''}"
-                data-talla-chip="${escapeHtml(v.talla)}" data-precio="${v.precio}">${escapeHtml(v.talla)}</button>`
-              )
-              .join('')}
-          </div>`
-        : ''
-    }
+    <h3><a href="producto.html?id=${encodeURIComponent(producto.slug)}">${escapeHtml(codigo)}</a></h3>
+    <p class="card-price">${formatPrice(producto.precio)}</p>
     <div class="card-actions">
       <a class="btn btn-outline" href="producto.html?id=${encodeURIComponent(producto.slug)}">Ver detalle</a>
-      ${
-        variantePorDefecto
-          ? `<button type="button" class="btn" data-add="${escapeHtml(producto.slug)}" data-talla="${escapeHtml(variantePorDefecto.talla)}">Agregar</button>`
-          : ''
-      }
+      <button type="button" class="btn" data-add="${escapeHtml(producto.slug)}">Agregar</button>
     </div>
   </article>`;
-}
-
-function wireTallaChips(contenedor) {
-  contenedor.addEventListener('click', (e) => {
-    const chip = e.target.closest('.talla-chip');
-    if (!chip) return;
-    const card = chip.closest('.product-card');
-    if (!card) return;
-
-    card.querySelectorAll('.talla-chip').forEach((c) => c.classList.toggle('selected', c === chip));
-
-    const precioEl = card.querySelector('[data-card-price]');
-    if (precioEl) precioEl.textContent = formatPrice(Number(chip.dataset.precio));
-
-    const addBtn = card.querySelector('button[data-add]');
-    if (addBtn) addBtn.dataset.talla = chip.dataset.tallaChip;
-  });
 }
 
 function wireAddButtons(contenedor, productos) {
@@ -105,15 +64,14 @@ function wireAddButtons(contenedor, productos) {
     const btn = e.target.closest('button[data-add]');
     if (!btn) return;
     const producto = productos.find((p) => p.slug === btn.dataset.add);
-    const variante = producto?.variantes.find((v) => v.talla === btn.dataset.talla);
-    if (!producto || !variante) return;
+    if (!producto) return;
 
     addToCart({
-      key: `p-${producto.slug}-${variante.talla}`,
+      key: `p-${producto.slug}`,
       id: producto.slug,
       tipo: 'producto',
-      nombre: `${producto.nombre} (${variante.talla})`,
-      precio: variante.precio,
+      nombre: producto.nombre,
+      precio: producto.precio,
       cantidad: 1,
       detalle: null,
       imagen: producto.imagen,
@@ -163,10 +121,8 @@ const CATEGORY_DESCRIPTIONS = {
 async function initCategoryGrid() {
   const grid = document.getElementById('home-category-grid');
   if (!grid) return;
-  // Las categorías huérfanas (orden 90+, ver schema.sql) no se muestran
-  // en la grilla del home — filtrar por orden real en vez de cortar en un
-  // número fijo, porque la cantidad de categorías vigentes puede cambiar.
-  const categorias = (await loadCategorias()).filter((c) => c.orden < 90);
+  // Solo categorías marcadas visible=1 desde /admin/categorias.php.
+  const categorias = (await loadCategorias()).filter((c) => c.visible);
   grid.innerHTML = categorias
     .map((c) => {
       const bg = c.imagenPortada ? ` style="background-image: url('${c.imagenPortada}')"` : '';
@@ -193,7 +149,6 @@ async function initFeatured() {
   if (!grid) return;
   const productos = (await loadProductos()).filter((p) => p.destacado).slice(0, 4);
   grid.innerHTML = productos.map(productCardHtml).join('');
-  wireTallaChips(grid);
   wireAddButtons(grid, productos);
   revealNow(grid);
 }
@@ -246,7 +201,6 @@ async function initCatalog() {
         ? '<p class="empty-msg">No encontramos arreglos con esos filtros. Prueba con otra combinación.</p>'
         : productos.map(productCardHtml).join('');
     revealNow(grid);
-    wireTallaChips(grid);
     wireAddButtons(grid, productos);
   }
 
@@ -278,6 +232,7 @@ async function initCategoryPage() {
   const eyebrowEl = document.getElementById('category-eyebrow');
   const titleEl = document.getElementById('category-title');
   const descEl = document.getElementById('category-desc');
+  const chipsWrap = document.getElementById('subcategory-chips');
   const selOrden = document.getElementById('sort-precio');
   const inputBusqueda = document.getElementById('search-input');
   const countEl = document.getElementById('results-count');
@@ -291,6 +246,7 @@ async function initCategoryPage() {
     descEl.textContent = '';
     const filterBar = document.querySelector('.filter-bar');
     if (filterBar) filterBar.style.display = 'none';
+    if (chipsWrap) chipsWrap.style.display = 'none';
     grid.innerHTML = `
       <p class="empty-msg">Esta categoría ya no existe o el enlace es incorrecto.
         <a href="catalogo.html">Ver el catálogo completo</a>.
@@ -306,10 +262,30 @@ async function initCategoryPage() {
     heroEl.style.backgroundImage = `url('${categoria.imagenPortada}')`;
   }
 
+  /* Chips de subcategoría (tipo de flor: Rosas, Lirios, Gerberas...) para
+     filtrar dentro de esta categoría, en vez de mostrar todo mezclado bajo
+     "Recomendados" — mismo patrón que los chips de categoría de catalogo.html. */
+  let subcategoriaActual = '';
+
+  function renderChips() {
+    if (!chipsWrap) return;
+    const opciones = [{ slug: '', nombre: 'Todas' }, ...(categoria.subcategorias || [])];
+    chipsWrap.innerHTML = opciones
+      .map(
+        (s) => `
+      <button type="button" class="category-chip ${s.slug === subcategoriaActual ? 'selected' : ''}" data-subcategoria="${escapeHtml(s.slug)}">
+        ${escapeHtml(s.nombre)}
+      </button>`
+      )
+      .join('');
+  }
+  renderChips();
+
   async function render() {
     countEl.textContent = 'Buscando arreglos…';
     const productos = await loadProductos({
       categoria: slug,
+      subcategoria: subcategoriaActual,
       orden: selOrden.value,
       q: inputBusqueda?.value.trim() || '',
     });
@@ -322,10 +298,16 @@ async function initCategoryPage() {
         ? `<p class="empty-msg">Todavía no hay arreglos publicados en ${escapeHtml(categoria.nombre)}. Prueba con otra categoría.</p>`
         : productos.map(productCardHtml).join('');
     revealNow(grid);
-    wireTallaChips(grid);
     wireAddButtons(grid, productos);
   }
 
+  chipsWrap?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.category-chip');
+    if (!btn) return;
+    subcategoriaActual = btn.dataset.subcategoria;
+    renderChips();
+    render();
+  });
   selOrden.addEventListener('change', render);
 
   let busquedaTimer = null;
@@ -338,21 +320,6 @@ async function initCategoryPage() {
 }
 
 /* ---------- Detalle (producto.html?id=slug) ---------- */
-
-function tallaSelectorHtml(variantes, seleccionada) {
-  return `
-    <div class="talla-selector" role="group" aria-label="Elegir talla">
-      ${variantes
-        .map(
-          (v) => `
-        <button type="button" class="talla-opcion ${v.talla === seleccionada ? 'selected' : ''}"
-          data-talla="${escapeHtml(v.talla)}" ${v.disponible ? '' : 'disabled'}>
-          ${escapeHtml(v.talla)}${v.disponible ? '' : ' (agotada)'}
-        </button>`
-        )
-        .join('')}
-    </div>`;
-}
 
 async function initProductDetail() {
   const cont = document.getElementById('product-content');
@@ -384,9 +351,6 @@ async function initProductDetail() {
     producto.retiroDisponible ? 'Retiro en tienda' : null,
   ].filter(Boolean);
 
-  const variantesDisponibles = producto.variantes.filter((v) => v.disponible);
-  let tallaActual = variantesDisponibles[0]?.talla ?? null;
-
   cont.innerHTML = `
     <div class="product-layout">
       <div class="arch-img reveal visible">
@@ -395,17 +359,11 @@ async function initProductDetail() {
       <div class="product-info">
         <p class="card-occasion">${escapeHtml(producto.subcategoria?.nombre || producto.categoria?.nombre || '')}</p>
         <h1>${escapeHtml(producto.nombre)}</h1>
-        <p class="product-price" id="detail-price">${formatPrice(variantesDisponibles[0]?.precio ?? 0)}</p>
+        <p class="product-price" id="detail-price">${formatPrice(producto.precio)}</p>
         <p class="desc">${escapeHtml(producto.descripcion || producto.descripcionCorta)}</p>
         ${disponibilidad}
         ${entregaBadges.length ? `<p class="muted" style="font-size:0.88rem">${entregaBadges.map(escapeHtml).join(' · ')}</p>` : ''}
         ${producto.incluye ? `<p class="muted" style="font-size:0.88rem"><strong>Incluye:</strong> ${escapeHtml(producto.incluye)}</p>` : ''}
-
-        ${producto.variantes.length > 1 ? `
-          <div class="talla-field">
-            <label>Tamaño</label>
-            ${tallaSelectorHtml(producto.variantes, tallaActual)}
-          </div>` : ''}
 
         <div class="qty-row">
           <div class="qty-stepper" role="group" aria-label="Cantidad">
@@ -413,10 +371,10 @@ async function initProductDetail() {
             <span class="qty-value" id="qty-value">1</span>
             <button type="button" id="qty-mas" aria-label="Agregar uno">+</button>
           </div>
-          <button type="button" class="btn" id="add-detail" ${producto.disponible && tallaActual ? '' : 'disabled'}>
+          <button type="button" class="btn" id="add-detail" ${producto.disponible ? '' : 'disabled'}>
             Agregar al carrito
           </button>
-          <button type="button" class="btn btn-outline" id="buy-now" ${producto.disponible && tallaActual ? '' : 'disabled'}>
+          <button type="button" class="btn btn-outline" id="buy-now" ${producto.disponible ? '' : 'disabled'}>
             Comprar ahora
           </button>
         </div>
@@ -437,24 +395,13 @@ async function initProductDetail() {
     qtyValue.textContent = cantidad;
   });
 
-  cont.querySelectorAll('.talla-opcion').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      tallaActual = btn.dataset.talla;
-      cont.querySelectorAll('.talla-opcion').forEach((b) => b.classList.toggle('selected', b === btn));
-      const v = producto.variantes.find((x) => x.talla === tallaActual);
-      document.getElementById('detail-price').textContent = formatPrice(v.precio);
-    });
-  });
-
   function itemDelCarrito() {
-    const v = producto.variantes.find((x) => x.talla === tallaActual);
     return {
-      key: `p-${producto.slug}-${tallaActual}`,
+      key: `p-${producto.slug}`,
       id: producto.slug,
       tipo: 'producto',
-      nombre: producto.variantes.length > 1 ? `${producto.nombre} (${tallaActual})` : producto.nombre,
-      precio: v.precio,
+      nombre: producto.nombre,
+      precio: producto.precio,
       cantidad,
       detalle: null,
       imagen: producto.imagen,
@@ -480,7 +427,6 @@ async function initProductDetail() {
     } else {
       relGrid.innerHTML = relacionados.map(productCardHtml).join('');
       revealNow(relGrid);
-      wireTallaChips(relGrid);
       wireAddButtons(relGrid, relacionados);
     }
   }

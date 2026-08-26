@@ -12,7 +12,7 @@ require_once __DIR__ . '/../config/db.php';
 
 try {
     $categorias = db()->query(
-        'SELECT id, slug, nombre, icono, imagen_portada, orden FROM categorias ORDER BY orden, nombre'
+        'SELECT id, slug, nombre, icono, imagen_portada, orden, visible FROM categorias ORDER BY orden, nombre'
     )->fetchAll();
 
     $subStmt = db()->query(
@@ -35,6 +35,7 @@ try {
             'icono' => $c['icono'],
             'imagenPortada' => $c['imagen_portada'],
             'orden' => (int) $c['orden'],
+            'visible' => (bool) $c['visible'],
             'subcategorias' => $subsPorCategoria[$c['id']] ?? [],
         ];
     }, $categorias);

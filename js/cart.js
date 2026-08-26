@@ -20,13 +20,15 @@ export function formatPrice(monto) {
 
 /**
  * Código corto de ramo (ej. "RM-4K2P9"), determinista a partir de la
- * `key` del item (mismo producto+talla o misma combinación de personalizado
+ * `key` del item (mismo producto o misma combinación de personalizado
  * siempre da el mismo código). Sirve para que el cliente lo mencione por
  * WhatsApp y el negocio identifique el ramo exacto desde el reporte de
  * códigos en /admin/codigos.php, sin depender del id autoincremental de
  * la base de datos (que todavía no existe cuando se arma el mensaje).
+ * Exportada para que productos.js pueda mostrarla en la tarjeta pública
+ * antes de que el producto se agregue al carrito.
  */
-function codigoRamo(key) {
+export function codigoRamo(key) {
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     hash = (Math.imul(hash, 31) + key.charCodeAt(i)) >>> 0;

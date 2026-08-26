@@ -960,44 +960,6 @@ p {
   font-family: var(--font-body);
 }
 
-/* Chips de talla bajo el precio — equivalente en LIRIOS a los swatches de
-   color de referencia (stampahn.com): LIRIOS no tiene variantes de color,
-   pero sí tallas S/M/L/XL con precio propio, así que cumplen el mismo rol
-   (elegir variante y ver su precio sin entrar al producto). Solo se
-   muestran cuando el producto tiene más de una talla disponible. */
-.card-tallas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0 1.25rem 1.05rem;
-}
-
-.talla-chip {
-  min-width: 30px;
-  height: 26px;
-  padding: 0 0.5rem;
-  background: var(--blanco);
-  border: 1.5px solid rgba(107, 114, 104, 0.3);
-  border-radius: 6px;
-  font-family: var(--font-display);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--gris-calido);
-  transition: all 0.15s ease;
-}
-
-.talla-chip:hover {
-  border-color: var(--mostaza);
-  color: var(--carbon);
-}
-
-.talla-chip.selected {
-  border-color: var(--mostaza);
-  background: var(--carbon);
-  color: var(--blanco);
-}
-
 .card-actions {
   margin-top: auto;
   padding: 0 1.25rem;
@@ -1331,53 +1293,6 @@ p {
 
 .availability.out {
   color: #B3423A;
-}
-
-/* ---------- Selector de talla (ficha de producto) ---------- */
-.talla-field {
-  margin: 1.25rem 0;
-}
-
-.talla-field label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--gris-calido);
-  margin-bottom: 0.5rem;
-}
-
-.talla-selector {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.talla-opcion {
-  min-width: 52px;
-  padding: 10px 14px;
-  background: var(--blanco);
-  border: 1.5px solid rgba(107, 114, 104, 0.3);
-  border-radius: 8px;
-  font-weight: 600;
-  color: var(--carbon);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.talla-opcion:hover:not(:disabled) {
-  border-color: var(--mostaza);
-}
-
-.talla-opcion.selected {
-  border-color: var(--mostaza);
-  background: var(--crema-suave);
-  box-shadow: 0 0 0 2px rgba(143, 111, 44, 0.2);
-}
-
-.talla-opcion:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  text-decoration: line-through;
 }
 
 /* ---------- Carrito ---------- */

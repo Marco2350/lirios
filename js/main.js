@@ -61,9 +61,8 @@ if (navDropdown && navPanel) {
   fetch('api/categorias.php')
     .then((res) => (res.ok ? res.json() : Promise.reject()))
     .then((data) => {
-      // Las categorías huérfanas (orden 90+, ver database/schema.sql) no
-      // se listan en el menú — filtrar por orden real, no por un tope fijo.
-      const categorias = (data.categorias || []).filter((c) => c.orden < 90);
+      // Solo categorías marcadas visible=1 desde /admin/categorias.php.
+      const categorias = (data.categorias || []).filter((c) => c.visible);
       const enlaces = categorias
         .map((c) => {
           const slug = String(c.slug).replace(/"/g, '&quot;');

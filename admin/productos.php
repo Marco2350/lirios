@@ -1,7 +1,7 @@
 <?php
 /**
  * CRUD del catálogo de productos, sobre la base de datos MySQL
- * (tablas productos / producto_variantes / subcategorias / categorias).
+ * (tablas productos / subcategorias / categorias).
  */
 
 require_once __DIR__ . '/includes/auth.php';
@@ -10,7 +10,6 @@ require_once __DIR__ . '/includes/layout.php';
 
 verificar_csrf();
 
-const TALLAS = ['S', 'M', 'L', 'XL'];
 const INCLUYE_POR_DEFECTO = 'Tarjeta personalizada y empaque premium';
 
 /* Subcategorías agrupadas por categoría, para el <select> del formulario */
@@ -46,24 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $retiroDisponible = isset($_POST['retiro_tienda_disponible']) ? 1 : 0;
         $disponible = isset($_POST['disponible']) ? 1 : 0;
         $destacado = isset($_POST['destacado']) ? 1 : 0;
-
-        $variantes = [];
-        foreach (TALLAS as $talla) {
-            $precio = limpiar_precio($_POST['precio_' . $talla] ?? '');
-            if ($precio > 0) {
-                $variantes[$talla] = [
-                    'precio' => $precio,
-                    'disponible' => isset($_POST['disp_' . $talla]) ? 1 : 0,
-                ];
-            }
-        }
+        $precio = limpiar_precio($_POST['precio'] ?? '');
 
         if ($nombre === '' || $descripcionCorta === '') {
             flash('error', 'El nombre y la descripción corta son obligatorios.');
         } elseif ($subcategoriaId <= 0) {
             flash('error', 'Elige una subcategoría para el producto.');
-        } elseif (!$variantes) {
-            flash('error', 'Agrega al menos una talla con precio mayor que cero.');
+        } elseif ($precio <= 0) {
+            flash('error', 'El precio debe ser mayor que cero.');
         } elseif ($imagenSeleccionada !== '' && !in_array($imagenSeleccionada, $fotos, true)) {
             flash('error', 'La foto seleccionada ya no está disponible. Elige otra o sube una nueva.');
         } else {
@@ -100,54 +89,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = db()->prepare(
                         'UPDATE productos SET subcategoria_id=:sub, nombre=:nombre,
                             descripcion_corta=:corta, descripcion=:desc, imagen=:imagen,
-                            incluye=:incluye, entrega_disponible=:entrega,
+                            incluye=:incluye, precio=:precio, entrega_disponible=:entrega,
                             retiro_tienda_disponible=:retiro, disponible=:disp, destacado=:dest
                          WHERE id=:id'
                     );
                     $stmt->execute([
                         'sub' => $subcategoriaId, 'nombre' => $nombre, 'corta' => $descripcionCorta,
                         'desc' => $descripcion, 'imagen' => $rutaImagen, 'incluye' => $incluye,
-                        'entrega' => $entregaDisponible, 'retiro' => $retiroDisponible,
+                        'precio' => $precio, 'entrega' => $entregaDisponible, 'retiro' => $retiroDisponible,
                         'disp' => $disponible, 'dest' => $destacado, 'id' => $idOriginal,
                     ]);
-                    $productoId = $idOriginal;
                     $msj = 'Producto actualizado.';
                 } else {
                     $slug = slug_unico('productos', slugify($nombre));
                     $stmt = db()->prepare(
                         'INSERT INTO productos
                             (subcategoria_id, slug, nombre, descripcion_corta, descripcion, imagen,
-                             incluye, entrega_disponible, retiro_tienda_disponible, disponible, destacado)
-                         VALUES (:sub, :slug, :nombre, :corta, :desc, :imagen, :incluye, :entrega, :retiro, :disp, :dest)'
+                             incluye, precio, entrega_disponible, retiro_tienda_disponible, disponible, destacado)
+                         VALUES (:sub, :slug, :nombre, :corta, :desc, :imagen, :incluye, :precio, :entrega, :retiro, :disp, :dest)'
                     );
                     $stmt->execute([
                         'sub' => $subcategoriaId, 'slug' => $slug, 'nombre' => $nombre,
                         'corta' => $descripcionCorta, 'desc' => $descripcion, 'imagen' => $rutaImagen,
-                        'incluye' => $incluye, 'entrega' => $entregaDisponible, 'retiro' => $retiroDisponible,
+                        'incluye' => $incluye, 'precio' => $precio, 'entrega' => $entregaDisponible, 'retiro' => $retiroDisponible,
                         'disp' => $disponible, 'dest' => $destacado,
                     ]);
-                    $productoId = (int) db()->lastInsertId();
                     $msj = 'Producto agregado al catálogo.';
-                }
-
-                /* Variantes: upsert las que tienen precio, borrar el resto */
-                $upsert = db()->prepare(
-                    'INSERT INTO producto_variantes (producto_id, talla, precio, disponible, orden)
-                     VALUES (:pid, :talla, :precio, :disp, :orden)
-                     ON DUPLICATE KEY UPDATE precio = VALUES(precio), disponible = VALUES(disponible)'
-                );
-                $borrar = db()->prepare('DELETE FROM producto_variantes WHERE producto_id = :pid AND talla = :talla');
-                foreach (TALLAS as $orden => $talla) {
-                    if (isset($variantes[$talla])) {
-                        $upsert->execute([
-                            'pid' => $productoId, 'talla' => $talla,
-                            'precio' => $variantes[$talla]['precio'],
-                            'disp' => $variantes[$talla]['disponible'],
-                            'orden' => $orden,
-                        ]);
-                    } else {
-                        $borrar->execute(['pid' => $productoId, 'talla' => $talla]);
-                    }
                 }
 
                 db()->commit();
@@ -211,32 +178,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filas[] = ['nombre' => $nombre, 'precio' => $precio, 'imagen' => $rutaImagen];
         }
 
-        if ($errores) {
-            flash('error', implode(' ', $errores));
-        } elseif (!$filas) {
-            flash('error', 'Agrega al menos un producto con nombre y precio.');
+        if (!$filas) {
+            flash('error', $errores ? implode(' ', $errores) : 'Agrega al menos un producto con nombre y precio.');
         } else {
             db()->beginTransaction();
             try {
                 $insertProducto = db()->prepare(
-                    'INSERT INTO productos (subcategoria_id, slug, nombre, descripcion_corta, imagen)
-                     VALUES (:sub, :slug, :nombre, :corta, :imagen)'
-                );
-                $insertVariante = db()->prepare(
-                    "INSERT INTO producto_variantes (producto_id, talla, precio, disponible, orden)
-                     VALUES (:pid, 'M', :precio, 1, 1)"
+                    'INSERT INTO productos (subcategoria_id, slug, nombre, descripcion_corta, imagen, precio)
+                     VALUES (:sub, :slug, :nombre, :corta, :imagen, :precio)'
                 );
                 foreach ($filas as $fila) {
                     $slug = slug_unico('productos', slugify($fila['nombre']));
                     $insertProducto->execute([
                         'sub' => $subcategoriaId, 'slug' => $slug,
                         'nombre' => $fila['nombre'], 'corta' => $fila['nombre'],
-                        'imagen' => $fila['imagen'],
+                        'imagen' => $fila['imagen'], 'precio' => $fila['precio'],
                     ]);
-                    $insertVariante->execute(['pid' => (int) db()->lastInsertId(), 'precio' => $fila['precio']]);
                 }
                 db()->commit();
-                flash('ok', count($filas) . ' producto(s) agregados al catálogo. Puedes editarlos después para completar descripción, tallas adicionales o cambiar la foto.');
+                /* Las filas válidas se guardan aunque otras de la misma tanda hayan
+                   fallado (fila vacía a medias, foto rechazada, etc.) — antes un solo
+                   error descartaba las 5 filas de la carga rápida completa. */
+                $msj = count($filas) . ' producto(s) agregados al catálogo. Puedes editarlos después para completar descripción o cambiar la foto.';
+                if ($errores) {
+                    $msj .= ' Se omitieron ' . count($errores) . ' fila(s): ' . implode(' ', $errores);
+                }
+                flash('ok', $msj);
             } catch (Throwable $e) {
                 db()->rollBack();
                 error_log('[lirios] Error en carga rápida de productos: ' . $e->getMessage());
@@ -266,18 +233,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 /* ---------- Producto en edición (?editar=id) ---------- */
 
 $editando = null;
-$variantesEditando = [];
 if (!empty($_GET['editar'])) {
     $stmt = db()->prepare('SELECT * FROM productos WHERE id = ?');
     $stmt->execute([(int) $_GET['editar']]);
     $editando = $stmt->fetch() ?: null;
-    if ($editando) {
-        $vStmt = db()->prepare('SELECT talla, precio, disponible FROM producto_variantes WHERE producto_id = ?');
-        $vStmt->execute([$editando['id']]);
-        foreach ($vStmt->fetchAll() as $v) {
-            $variantesEditando[$v['talla']] = $v;
-        }
-    }
 }
 
 /* ---------- Catálogo actual (para la tabla) ---------- */
@@ -290,15 +249,10 @@ $productos = db()->query(
      ORDER BY p.nombre'
 )->fetchAll();
 
-$variantesPorProducto = [];
-foreach (db()->query('SELECT producto_id, talla, precio FROM producto_variantes ORDER BY producto_id') as $v) {
-    $variantesPorProducto[$v['producto_id']][] = $v;
-}
-
 admin_header('Productos del catálogo', 'productos.php');
 ?>
 
-<p class="intro">Cada producto necesita al menos una talla con precio para poder mostrarse en el sitio. Los cambios que guardes aquí se ven en el catálogo público de inmediato.</p>
+<p class="intro">Cada producto necesita un precio para poder mostrarse en el sitio. Los cambios que guardes aquí se ven en el catálogo público de inmediato.</p>
 
 <div class="panel">
   <h2><?= $editando ? 'Editar producto: ' . e($editando['nombre']) : 'Agregar producto nuevo' ?></h2>
@@ -360,17 +314,9 @@ admin_header('Productos del catálogo', 'productos.php');
         <input type="text" id="incluye" name="incluye" maxlength="255" value="<?= e($editando['incluye'] ?? INCLUYE_POR_DEFECTO) ?>">
       </div>
 
-      <div class="full">
-        <label>Tallas y precios * <small>(deja el precio en blanco en las tallas que no apliquen)</small></label>
-        <div class="talla-grid">
-          <?php foreach (TALLAS as $talla): $v = $variantesEditando[$talla] ?? null; ?>
-            <div class="talla-box">
-              <strong><?= e($talla) ?></strong>
-              <input type="number" name="precio_<?= e($talla) ?>" min="0" step="0.01" placeholder="L." value="<?= $v ? e((string)$v['precio']) : '' ?>">
-              <label class="check-row"><input type="checkbox" name="disp_<?= e($talla) ?>" <?= (!$v || !empty($v['disponible'])) ? 'checked' : '' ?>> Disponible</label>
-            </div>
-          <?php endforeach; ?>
-        </div>
+      <div>
+        <label for="precio">Precio (L.) *</label>
+        <input type="number" id="precio" name="precio" min="0" step="0.01" required placeholder="L." value="<?= e($editando['precio'] ?? '') ?>">
       </div>
 
       <div>
@@ -394,7 +340,7 @@ admin_header('Productos del catálogo', 'productos.php');
 
 <div class="panel">
   <h2>Carga rápida (varios productos a la vez)</h2>
-  <p class="intro">Para cargar el catálogo rápido: elige una categoría/subcategoría (aplica a todas las filas) y escribe el nombre, precio y, si quieres, la foto de cada producto. Quedan publicados con talla única (M) — después puedes editarlos uno por uno para sumarles descripción y más tallas.</p>
+  <p class="intro">Para cargar el catálogo rápido: elige una categoría/subcategoría (aplica a todas las filas) y escribe el nombre, precio y, si quieres, la foto de cada producto. Después puedes editarlos uno por uno para sumarles descripción.</p>
   <form method="post" action="productos.php" enctype="multipart/form-data">
     <?= csrf_field() ?>
     <input type="hidden" name="accion" value="guardar_rapido">
@@ -473,7 +419,7 @@ admin_header('Productos del catálogo', 'productos.php');
           <th>Nombre</th>
           <th>Categoría</th>
           <th>Subcategoría</th>
-          <th>Tallas</th>
+          <th>Precio</th>
           <th>Estado</th>
           <th>Acciones</th>
         </tr>
@@ -491,11 +437,7 @@ admin_header('Productos del catálogo', 'productos.php');
             </td>
             <td><?= e($p['categoria_nombre']) ?></td>
             <td><?= e($p['subcategoria_nombre']) ?></td>
-            <td>
-              <?php foreach ($variantesPorProducto[$p['id']] ?? [] as $v): ?>
-                <span class="badge si"><?= e($v['talla']) ?> L.<?= number_format((float)$v['precio'], 0) ?></span>
-              <?php endforeach; ?>
-            </td>
+            <td>L. <?= number_format((float) $p['precio'], 2) ?></td>
             <td><span class="badge <?= !empty($p['disponible']) ? 'si' : 'no' ?>"><?= !empty($p['disponible']) ? 'Disponible' : 'Agotado' ?></span></td>
             <td>
               <div class="acciones-fila">

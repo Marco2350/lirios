@@ -24,17 +24,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nombre = limpiar_texto($_POST['nombre'] ?? '', 100);
         $icono = limpiar_texto($_POST['icono'] ?? '', 10);
         $orden = (int) ($_POST['orden'] ?? 0);
+        $visible = isset($_POST['visible']) ? 1 : 0;
 
         if ($nombre === '') {
             flash('error', 'El nombre de la categoría es obligatorio.');
         } elseif ($id > 0) {
-            db()->prepare('UPDATE categorias SET nombre=:nombre, icono=:icono, orden=:orden WHERE id=:id')
-                ->execute(['nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'id' => $id]);
+            db()->prepare('UPDATE categorias SET nombre=:nombre, icono=:icono, orden=:orden, visible=:visible WHERE id=:id')
+                ->execute(['nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible, 'id' => $id]);
             flash('ok', 'Categoría actualizada.');
         } else {
             $slug = slug_unico('categorias', slugify($nombre));
-            db()->prepare('INSERT INTO categorias (slug, nombre, icono, orden) VALUES (:slug, :nombre, :icono, :orden)')
-                ->execute(['slug' => $slug, 'nombre' => $nombre, 'icono' => $icono, 'orden' => $orden]);
+            db()->prepare('INSERT INTO categorias (slug, nombre, icono, orden, visible) VALUES (:slug, :nombre, :icono, :orden, :visible)')
+                ->execute(['slug' => $slug, 'nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible]);
             flash('ok', 'Categoría agregada.');
         }
         header('Location: categorias.php');
@@ -103,14 +104,14 @@ $conteoSubs = array_count_values(array_column($subcategorias, 'categoria_nombre'
 admin_header('Categorías y subcategorías', 'categorias.php');
 ?>
 
-<p class="intro">Organiza la vitrina del catálogo en dos niveles: <strong>categorías</strong> (ej. "Ramos Florales") y sus <strong>subcategorías</strong> (ej. "Rosas"). Cada producto pertenece a una sola subcategoría.</p>
+<p class="intro">Organiza la vitrina del catálogo en dos niveles: <strong>categorías</strong> (ej. "Ramos Florales") y sus <strong>subcategorías</strong> (ej. "Rosas"). Cada producto pertenece a una sola subcategoría. Desmarca "Visible" para ocultar una categoría del menú y del home sin borrarla — sigue accesible por su enlace directo y conserva sus productos.</p>
 
 <div class="panel">
   <h2>Categorías (<?= count($categorias) ?>)</h2>
   <div class="tabla-scroll">
     <table class="tabla">
       <thead>
-        <tr><th>Ícono</th><th>Nombre</th><th>Orden</th><th>Subcategorías</th><th>Acciones</th></tr>
+        <tr><th>Ícono</th><th>Nombre</th><th>Orden</th><th>Visible</th><th>Subcategorías</th><th>Acciones</th></tr>
       </thead>
       <tbody>
         <?php foreach ($categorias as $c): $fid = 'cat-' . $c['id']; ?>
@@ -118,6 +119,7 @@ admin_header('Categorías y subcategorías', 'categorias.php');
           <td><input type="text" name="icono" maxlength="10" style="width:4.5rem" form="<?= e($fid) ?>" value="<?= e($c['icono'] ?? '') ?>"></td>
           <td><input type="text" name="nombre" required maxlength="100" form="<?= e($fid) ?>" value="<?= e($c['nombre']) ?>"></td>
           <td><input type="number" name="orden" style="width:5rem" form="<?= e($fid) ?>" value="<?= (int) $c['orden'] ?>"></td>
+          <td><input type="checkbox" name="visible" form="<?= e($fid) ?>" <?= !empty($c['visible']) ? 'checked' : '' ?>></td>
           <td><?= (int) ($conteoSubs[$c['nombre']] ?? 0) ?></td>
           <td>
             <div class="acciones-fila">
@@ -133,6 +135,7 @@ admin_header('Categorías y subcategorías', 'categorias.php');
           <td><input type="text" name="icono" maxlength="10" style="width:4.5rem" form="cat-nueva" placeholder="—"></td>
           <td><input type="text" name="nombre" required maxlength="100" form="cat-nueva" placeholder="Nueva categoría…"></td>
           <td><input type="number" name="orden" style="width:5rem" form="cat-nueva" value="0"></td>
+          <td><input type="checkbox" name="visible" form="cat-nueva" checked></td>
           <td>—</td>
           <td><button type="submit" class="btn mini secundario" form="cat-nueva">+ Agregar</button></td>
         </tr>

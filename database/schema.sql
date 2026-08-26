@@ -35,7 +35,8 @@ CREATE TABLE categorias (
   nombre          VARCHAR(150) NOT NULL,
   icono           VARCHAR(10)  DEFAULT NULL,
   imagen_portada  VARCHAR(255) DEFAULT NULL,
-  orden           INT NOT NULL DEFAULT 0
+  orden           INT NOT NULL DEFAULT 0,
+  visible         TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE subcategorias (
@@ -52,6 +53,12 @@ CREATE TABLE subcategorias (
 -- Catálogo de productos
 -- ---------------------------------------------------------
 
+-- Nota (2026-08-26): el catálogo tuvo tallas S/M/L/XL con precio propio por
+-- talla (tabla producto_variantes). La clienta pidió quitar ese sistema y
+-- dejar un precio único por producto ("quitar segmentos de bases"). Se migró
+-- el precio de cada producto multi-talla al de la talla M (o la disponible
+-- más cercana a M si no tenía M) y se eliminó producto_variantes — backup
+-- previo en database/backups/producto_variantes_20260826_073258.sql.
 CREATE TABLE productos (
   id                       INT AUTO_INCREMENT PRIMARY KEY,
   subcategoria_id          INT NOT NULL,
@@ -61,6 +68,7 @@ CREATE TABLE productos (
   descripcion              TEXT,
   imagen                   VARCHAR(255) DEFAULT NULL,
   incluye                  VARCHAR(255) NOT NULL DEFAULT 'Tarjeta personalizada y empaque premium',
+  precio                   DECIMAL(10,2) NOT NULL,
   entrega_disponible       TINYINT(1) NOT NULL DEFAULT 1,
   retiro_tienda_disponible TINYINT(1) NOT NULL DEFAULT 1,
   disponible               TINYINT(1) NOT NULL DEFAULT 1,
@@ -68,18 +76,6 @@ CREATE TABLE productos (
   creado_en                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   actualizado_en           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (subcategoria_id) REFERENCES subcategorias(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Cada producto puede venderse en varias tallas, cada una con su propio precio.
-CREATE TABLE producto_variantes (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
-  producto_id  INT NOT NULL,
-  talla        ENUM('S','M','L','XL') NOT NULL,
-  precio       DECIMAL(10,2) NOT NULL,
-  disponible   TINYINT(1) NOT NULL DEFAULT 1,
-  orden        INT NOT NULL DEFAULT 0,
-  FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_producto_talla (producto_id, talla)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------
@@ -131,27 +127,28 @@ CREATE INDEX idx_pedido_items_codigo ON pedido_items(codigo);
 -- Taxonomía vigente desde 2026-08-21: 14 categorías pedidas por la clienta,
 -- cada una pensada como página propia con portada distinta (imagen_portada).
 -- 'amor-y-romance' y 'peluches' quedaron huérfanas de esta lista (no se
--- borraron por si tienen productos asociados) — no aparecen en la grilla de
--- categorías del sitio hasta que se decida fusionarlas o retirarlas.
+-- borraron por si tienen productos asociados) — se marcan visible=0 para no
+-- aparecer en el menú/grilla del sitio hasta que se decida fusionarlas o
+-- retirarlas (ver columna `visible`, sección 6.1 de CLAUDE.md, 2026-08-26).
 -- 'arreglos-florales' se creó el 2026-08-21 y se retiró el mismo día a
 -- pedido de la clienta ("no, porque todos son arreglos florales" — es
 -- redundante como categoría, no aporta nada que no diga ya cada producto).
-INSERT INTO categorias (slug, nombre, icono, imagen_portada, orden) VALUES
-  ('ramos-florales',                    'Ramos Florales',                NULL, 'images/categorias/ramos-florales.webp',                    1),
-  ('arreglos-en-base',                  'Arreglos en Base',              NULL, 'images/categorias/arreglos-en-base.webp',                  2),
-  ('cumpleanos',                        'Arreglos Cumpleaños',           NULL, 'images/categorias/cumpleanos.webp',                        3),
-  ('caballero',                         'Arreglos para Caballero',       NULL, NULL,                                                        4),
-  ('infantil',                          'Arreglos Infantiles',           NULL, 'images/categorias/infantil.webp',                          5),
-  ('desayuno-sorpresa',                 'Desayuno Sorpresa',             NULL, 'images/categorias/desayuno-sorpresa.webp',                 6),
-  ('aniversario',                       'Aniversario',                   NULL, 'images/categorias/aniversario.webp',                       7),
-  ('chocolates-perfumes-complementos',  'Complementos',                  NULL, 'images/categorias/chocolates-perfumes-complementos.webp',  8),
-  ('graduaciones',                      'Arreglos de Graduación',        NULL, 'images/categorias/graduaciones.webp',                      9),
-  ('bodas',                             'Arreglos para Bodas',           NULL, NULL,                                                        10),
-  ('funebres',                          'Arreglos Fúnebres',             NULL, 'images/categorias/funebres.webp',                          11),
-  ('flores-preservadas',                'Arreglos con Flores Preservadas', NULL, NULL,                                                      12),
-  ('globos',                            'Globos',                        NULL, 'images/categorias/globos.webp',                            13),
-  ('amor-y-romance',                    'Amor y Romance',                NULL, NULL,                                                        90),
-  ('peluches',                          'Peluches',                      NULL, NULL,                                                        91);
+INSERT INTO categorias (slug, nombre, icono, imagen_portada, orden, visible) VALUES
+  ('ramos-florales',                    'Ramos Florales',                NULL, 'images/categorias/ramos-florales.webp',                    1,  1),
+  ('arreglos-en-base',                  'Arreglos en Base',              NULL, 'images/categorias/arreglos-en-base.webp',                  2,  1),
+  ('cumpleanos',                        'Arreglos Cumpleaños',           NULL, 'images/categorias/cumpleanos.webp',                        3,  1),
+  ('caballero',                         'Arreglos para Caballero',       NULL, NULL,                                                        4,  1),
+  ('infantil',                          'Arreglos Infantiles',           NULL, 'images/categorias/infantil.webp',                          5,  1),
+  ('desayuno-sorpresa',                 'Desayuno Sorpresa',             NULL, 'images/categorias/desayuno-sorpresa.webp',                 6,  1),
+  ('aniversario',                       'Aniversario',                   NULL, 'images/categorias/aniversario.webp',                       7,  1),
+  ('chocolates-perfumes-complementos',  'Complementos',                  NULL, 'images/categorias/chocolates-perfumes-complementos.webp',  8,  1),
+  ('graduaciones',                      'Arreglos de Graduación',        NULL, 'images/categorias/graduaciones.webp',                      9,  1),
+  ('bodas',                             'Arreglos para Bodas',           NULL, NULL,                                                        10, 1),
+  ('funebres',                          'Arreglos Fúnebres',             NULL, 'images/categorias/funebres.webp',                          11, 1),
+  ('flores-preservadas',                'Arreglos con Flores Preservadas', NULL, NULL,                                                      12, 1),
+  ('globos',                            'Globos',                        NULL, 'images/categorias/globos.webp',                            13, 1),
+  ('amor-y-romance',                    'Amor y Romance',                NULL, NULL,                                                        90, 0),
+  ('peluches',                          'Peluches',                      NULL, NULL,                                                        91, 0);
 
 INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
   -- 1. Ramos Florales
@@ -276,7 +273,7 @@ INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
 -- etc.) que existían aquí eran solo placeholders para desarrollo y
 -- se quitaron de esta instalación limpia para no publicar un
 -- catálogo ficticio por accidente. Claudia carga el catálogo real
--- (nombre, categoría, tallas y precios, fotos) desde
+-- (nombre, categoría, precio, fotos) desde
 -- /admin/productos.php una vez que el sitio esté en el hosting
 -- final — ver CLAUDE.md sección 9, pendiente "Catálogo real de
 -- productos".

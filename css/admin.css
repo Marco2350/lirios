@@ -1256,31 +1256,6 @@ form.inline {
   margin-top: 0.35rem;
 }
 
-/* ---------- Tallas y precios (productos.php) ---------- */
-.talla-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.75rem;
-}
-
-.talla-box {
-  border: 1px solid var(--borde-sutil);
-  border-radius: var(--radius);
-  padding: 0.75rem;
-  background: var(--fondo);
-}
-
-.talla-box strong {
-  display: block;
-  margin-bottom: 0.4rem;
-  color: var(--mostaza-dark);
-  font-family: var(--font-display);
-}
-
-.talla-box input[type="number"] {
-  margin-bottom: 0.45rem;
-}
-
 /* ---------- Gráficos de barras (reportes.php) ---------- */
 .chart-bars {
   display: flex;
