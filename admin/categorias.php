@@ -25,18 +25,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $icono = limpiar_texto($_POST['icono'] ?? '', 10);
         $orden = (int) ($_POST['orden'] ?? 0);
         $visible = isset($_POST['visible']) ? 1 : 0;
+        $portadaSeleccionada = basename(limpiar_texto($_POST['imagen_portada_select'] ?? '', 150));
+
+        $fotosPortadas = is_dir(IMAGENES_CATEGORIAS_DIR)
+            ? array_map('basename', glob(IMAGENES_CATEGORIAS_DIR . '/*.{jpg,jpeg,png,webp}', GLOB_BRACE))
+            : [];
 
         if ($nombre === '') {
             flash('error', 'El nombre de la categoría es obligatorio.');
-        } elseif ($id > 0) {
-            db()->prepare('UPDATE categorias SET nombre=:nombre, icono=:icono, orden=:orden, visible=:visible WHERE id=:id')
-                ->execute(['nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible, 'id' => $id]);
-            flash('ok', 'Categoría actualizada.');
+        } elseif ($portadaSeleccionada !== '' && !in_array($portadaSeleccionada, $fotosPortadas, true)) {
+            flash('error', 'La portada seleccionada ya no está disponible. Elige otra o sube una nueva.');
         } else {
-            $slug = slug_unico('categorias', slugify($nombre));
-            db()->prepare('INSERT INTO categorias (slug, nombre, icono, orden, visible) VALUES (:slug, :nombre, :icono, :orden, :visible)')
-                ->execute(['slug' => $slug, 'nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible]);
-            flash('ok', 'Categoría agregada.');
+            /* Resolver la portada: 1) archivo subido ahora mismo, 2) foto ya
+               existente elegida en el select, 3) si se edita y no se tocó
+               nada, mantener la portada que ya tenía la categoría. */
+            $rutaPortada = null;
+            $errorImagen = null;
+
+            if (!empty($_FILES['imagen_portada']) && $_FILES['imagen_portada']['error'] !== UPLOAD_ERR_NO_FILE) {
+                $resultado = guardar_imagen_subida($_FILES['imagen_portada'], IMAGENES_CATEGORIAS_DIR);
+                if ($resultado['ok']) {
+                    $rutaPortada = 'images/categorias/' . $resultado['nombre'];
+                } else {
+                    $errorImagen = $resultado['error'];
+                }
+            } elseif ($portadaSeleccionada !== '') {
+                $rutaPortada = 'images/categorias/' . $portadaSeleccionada;
+            } elseif ($id > 0) {
+                $actual = db()->prepare('SELECT imagen_portada FROM categorias WHERE id = ?');
+                $actual->execute([$id]);
+                $rutaPortada = $actual->fetchColumn() ?: null;
+            }
+
+            if ($errorImagen) {
+                flash('error', $errorImagen);
+            } elseif ($id > 0) {
+                db()->prepare('UPDATE categorias SET nombre=:nombre, icono=:icono, orden=:orden, visible=:visible, imagen_portada=:portada WHERE id=:id')
+                    ->execute(['nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible, 'portada' => $rutaPortada, 'id' => $id]);
+                flash('ok', 'Categoría actualizada.');
+            } else {
+                $slug = slug_unico('categorias', slugify($nombre));
+                db()->prepare('INSERT INTO categorias (slug, nombre, icono, orden, visible, imagen_portada) VALUES (:slug, :nombre, :icono, :orden, :visible, :portada)')
+                    ->execute(['slug' => $slug, 'nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible, 'portada' => $rutaPortada]);
+                flash('ok', 'Categoría agregada.');
+            }
         }
         header('Location: categorias.php');
         exit;
@@ -93,6 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $categorias = db()->query('SELECT * FROM categorias ORDER BY orden, nombre')->fetchAll();
 
+/* Portadas ya subidas, para el select "elegir foto ya subida" de cada categoría */
+$fotosPortadas = is_dir(IMAGENES_CATEGORIAS_DIR)
+    ? array_map('basename', glob(IMAGENES_CATEGORIAS_DIR . '/*.{jpg,jpeg,png,webp}', GLOB_BRACE))
+    : [];
+
 $subcategorias = db()->query(
     'SELECT s.*, c.nombre AS categoria_nombre
      FROM subcategorias s JOIN categorias c ON c.id = s.categoria_id
@@ -111,11 +148,21 @@ admin_header('Categorías y subcategorías', 'categorias.php');
   <div class="tabla-scroll">
     <table class="tabla">
       <thead>
-        <tr><th>Ícono</th><th>Nombre</th><th>Orden</th><th>Visible</th><th>Subcategorías</th><th>Acciones</th></tr>
+        <tr><th>Portada</th><th>Ícono</th><th>Nombre</th><th>Orden</th><th>Visible</th><th>Subcategorías</th><th>Acciones</th></tr>
       </thead>
       <tbody>
-        <?php foreach ($categorias as $c): $fid = 'cat-' . $c['id']; ?>
+        <?php foreach ($categorias as $c): $fid = 'cat-' . $c['id']; $mid = 'modal-portada-' . $c['id']; ?>
         <tr>
+          <td>
+            <div class="portada-cell">
+              <?php if (!empty($c['imagen_portada'])): ?>
+                <img class="mini" src="../<?= e($c['imagen_portada']) ?>" alt="">
+              <?php else: ?>
+                <span class="portada-vacia">Sin portada</span>
+              <?php endif; ?>
+              <button type="button" class="btn mini secundario" data-abrir-modal="<?= e($mid) ?>">Cambiar foto</button>
+            </div>
+          </td>
           <td><input type="text" name="icono" maxlength="10" style="width:4.5rem" form="<?= e($fid) ?>" value="<?= e($c['icono'] ?? '') ?>"></td>
           <td><input type="text" name="nombre" required maxlength="100" form="<?= e($fid) ?>" value="<?= e($c['nombre']) ?>"></td>
           <td><input type="number" name="orden" style="width:5rem" form="<?= e($fid) ?>" value="<?= (int) $c['orden'] ?>"></td>
@@ -124,7 +171,9 @@ admin_header('Categorías y subcategorías', 'categorias.php');
           <td>
             <div class="acciones-fila">
               <button type="submit" class="btn mini" form="<?= e($fid) ?>">Guardar</button>
-              <button type="submit" class="btn mini peligro" form="del-<?= e($fid) ?>">Eliminar</button>
+              <button type="button" class="btn mini peligro"
+                data-confirmar-eliminar="del-<?= e($fid) ?>"
+                data-confirmar-mensaje="¿Eliminar la categoría «<?= e($c['nombre']) ?>»? Solo se puede si no tiene productos.">Eliminar</button>
             </div>
           </td>
         </tr>
@@ -132,6 +181,12 @@ admin_header('Categorías y subcategorías', 'categorias.php');
 
         <!-- Fila para agregar categoría nueva -->
         <tr>
+          <td>
+            <div class="portada-cell">
+              <span class="portada-vacia">Sin portada</span>
+              <button type="button" class="btn mini secundario" data-abrir-modal="modal-portada-nueva">Elegir foto</button>
+            </div>
+          </td>
           <td><input type="text" name="icono" maxlength="10" style="width:4.5rem" form="cat-nueva" placeholder="—"></td>
           <td><input type="text" name="nombre" required maxlength="100" form="cat-nueva" placeholder="Nueva categoría…"></td>
           <td><input type="number" name="orden" style="width:5rem" form="cat-nueva" value="0"></td>
@@ -145,22 +200,68 @@ admin_header('Categorías y subcategorías', 'categorias.php');
 
   <!-- Formularios de categorías (fuera de la tabla, asociados por form="id") -->
   <?php foreach ($categorias as $c): $fid = 'cat-' . $c['id']; ?>
-    <form id="<?= e($fid) ?>" method="post" action="categorias.php">
+    <form id="<?= e($fid) ?>" method="post" action="categorias.php" enctype="multipart/form-data">
       <?= csrf_field() ?>
       <input type="hidden" name="accion" value="guardar_categoria">
       <input type="hidden" name="id" value="<?= (int) $c['id'] ?>">
     </form>
-    <form id="del-<?= e($fid) ?>" method="post" action="categorias.php" onsubmit="return confirm('¿Eliminar la categoría «<?= e($c['nombre']) ?>»? Solo se puede si no tiene productos.');">
+    <form id="del-<?= e($fid) ?>" method="post" action="categorias.php">
       <?= csrf_field() ?>
       <input type="hidden" name="accion" value="eliminar_categoria">
       <input type="hidden" name="id" value="<?= (int) $c['id'] ?>">
     </form>
   <?php endforeach; ?>
-  <form id="cat-nueva" method="post" action="categorias.php">
+  <form id="cat-nueva" method="post" action="categorias.php" enctype="multipart/form-data">
     <?= csrf_field() ?>
     <input type="hidden" name="accion" value="guardar_categoria">
     <input type="hidden" name="id" value="0">
   </form>
+
+  <!-- Modales de portada (uno por categoría + uno para la fila nueva). Los
+       campos de imagen se asocian con form="cat-N", así que "Guardar" desde
+       el modal envía el mismo <form> de la fila (nombre/orden/visible ya
+       en ese form vía el mismo atributo). -->
+  <?php foreach ($categorias as $c): $fid = 'cat-' . $c['id']; $mid = 'modal-portada-' . $c['id']; ?>
+    <dialog class="modal-portada" id="<?= e($mid) ?>">
+      <h3>Portada de «<?= e($c['nombre']) ?>»</h3>
+      <?php if (!empty($c['imagen_portada'])): ?>
+        <img class="modal-portada-preview" src="../<?= e($c['imagen_portada']) ?>" alt="">
+      <?php endif; ?>
+      <label for="<?= e($mid) ?>-archivo">Subir foto nueva</label>
+      <input type="file" id="<?= e($mid) ?>-archivo" name="imagen_portada" form="<?= e($fid) ?>" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+      <small>JPG, PNG o WebP · máx. 3 MB · se convierte a WebP automáticamente.</small>
+      <label for="<?= e($mid) ?>-select">O elegir una ya subida</label>
+      <select id="<?= e($mid) ?>-select" name="imagen_portada_select" form="<?= e($fid) ?>">
+        <option value="">— No cambiar —</option>
+        <?php $portadaActual = basename($c['imagen_portada'] ?? ''); ?>
+        <?php foreach ($fotosPortadas as $f): ?>
+          <option value="<?= e($f) ?>" <?= $portadaActual === $f ? 'selected' : '' ?>><?= e($f) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <div class="modal-portada-acciones">
+        <button type="button" class="btn mini secundario" data-cerrar-modal>Cancelar</button>
+        <button type="submit" class="btn mini" form="<?= e($fid) ?>">Guardar</button>
+      </div>
+    </dialog>
+  <?php endforeach; ?>
+
+  <dialog class="modal-portada" id="modal-portada-nueva">
+    <h3>Portada de la categoría nueva</h3>
+    <label for="modal-portada-nueva-archivo">Subir foto nueva</label>
+    <input type="file" id="modal-portada-nueva-archivo" name="imagen_portada" form="cat-nueva" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+    <small>JPG, PNG o WebP · máx. 3 MB · se convierte a WebP automáticamente.</small>
+    <label for="modal-portada-nueva-select">O elegir una ya subida</label>
+    <select id="modal-portada-nueva-select" name="imagen_portada_select" form="cat-nueva">
+      <option value="">— Sin portada —</option>
+      <?php foreach ($fotosPortadas as $f): ?>
+        <option value="<?= e($f) ?>"><?= e($f) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <div class="modal-portada-acciones">
+      <button type="button" class="btn mini secundario" data-cerrar-modal>Cancelar</button>
+      <button type="submit" class="btn mini secundario" form="cat-nueva">+ Agregar categoría</button>
+    </div>
+  </dialog>
 </div>
 
 <div class="panel">
@@ -185,7 +286,9 @@ admin_header('Categorías y subcategorías', 'categorias.php');
           <td>
             <div class="acciones-fila">
               <button type="submit" class="btn mini" form="<?= e($fid) ?>">Guardar</button>
-              <button type="submit" class="btn mini peligro" form="del-<?= e($fid) ?>">Eliminar</button>
+              <button type="button" class="btn mini peligro"
+                data-confirmar-eliminar="del-<?= e($fid) ?>"
+                data-confirmar-mensaje="¿Eliminar la subcategoría «<?= e($s['nombre']) ?>»? Solo se puede si no tiene productos.">Eliminar</button>
             </div>
           </td>
         </tr>
@@ -215,7 +318,7 @@ admin_header('Categorías y subcategorías', 'categorias.php');
       <input type="hidden" name="accion" value="guardar_subcategoria">
       <input type="hidden" name="id" value="<?= (int) $s['id'] ?>">
     </form>
-    <form id="del-<?= e($fid) ?>" method="post" action="categorias.php" onsubmit="return confirm('¿Eliminar la subcategoría «<?= e($s['nombre']) ?>»? Solo se puede si no tiene productos.');">
+    <form id="del-<?= e($fid) ?>" method="post" action="categorias.php">
       <?= csrf_field() ?>
       <input type="hidden" name="accion" value="eliminar_subcategoria">
       <input type="hidden" name="id" value="<?= (int) $s['id'] ?>">

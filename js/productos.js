@@ -6,7 +6,7 @@
    - Detalle de producto        (#product-content, ?id=slug)
    ========================================================= */
 
-import { addToCart, formatPrice, escapeHtml, showToast, codigoRamo } from './cart.js';
+import { addToCart, formatPrice, escapeHtml, showToast } from './cart.js';
 
 let categoriasCache = null;
 let productosCache = null;
@@ -43,14 +43,11 @@ async function loadProductoDetalle(slug) {
 /* ---------- Tarjetas de producto ---------- */
 
 function productCardHtml(producto) {
-  const codigo = codigoRamo(`p-${producto.slug}`);
-
   return `
   <article class="product-card reveal" data-slug="${escapeHtml(producto.slug)}">
     <a class="card-img" href="producto.html?id=${encodeURIComponent(producto.slug)}" aria-label="Ver ${escapeHtml(producto.nombre)}">
       <img src="${escapeHtml(producto.imagen || 'images/logo.png')}" alt="${escapeHtml(producto.nombre)}" loading="lazy">
     </a>
-    <h3><a href="producto.html?id=${encodeURIComponent(producto.slug)}">${escapeHtml(codigo)}</a></h3>
     <p class="card-price">${formatPrice(producto.precio)}</p>
     <div class="card-actions">
       <a class="btn btn-outline" href="producto.html?id=${encodeURIComponent(producto.slug)}">Ver detalle</a>

@@ -16,6 +16,9 @@ require_once dirname(__DIR__, 2) . '/config/db.php';
 // Carpeta de imágenes de producto
 define('IMAGENES_DIR', dirname(__DIR__, 2) . '/images/productos');
 
+// Carpeta de portadas de categoría (catalogo.html, grilla del home)
+define('IMAGENES_CATEGORIAS_DIR', dirname(__DIR__, 2) . '/images/categorias');
+
 /** Minutos de inactividad antes de cerrar la sesión del panel sola. */
 const ADMIN_SESION_INACTIVIDAD_MIN = 30;
 

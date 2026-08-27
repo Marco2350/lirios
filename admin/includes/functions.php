@@ -78,25 +78,26 @@ function cargar_imagen_gd(string $ruta, string $mime)
     };
 }
 
-/** Genera un nombre de archivo único dentro de IMAGENES_DIR para $base.$ext. */
-function nombre_imagen_unico(string $base, string $ext): array
+/** Genera un nombre de archivo único dentro de $directorio para $base.$ext. */
+function nombre_imagen_unico(string $directorio, string $base, string $ext): array
 {
     $nombre = $base . '.' . $ext;
     $n = 2;
-    while (file_exists(IMAGENES_DIR . '/' . $nombre)) {
+    while (file_exists($directorio . '/' . $nombre)) {
         $nombre = $base . '-' . $n . '.' . $ext;
         $n++;
     }
-    return [$nombre, IMAGENES_DIR . '/' . $nombre];
+    return [$nombre, $directorio . '/' . $nombre];
 }
 
 /**
- * Valida y guarda una foto subida ($_FILES[...]) en /images/productos,
- * convirtiéndola a WebP automáticamente si el servidor tiene GD con
- * soporte WebP; si no, la guarda tal cual se subió.
+ * Valida y guarda una foto subida ($_FILES[...]) en $directorio (por
+ * defecto /images/productos; también se usa para /images/categorias con
+ * IMAGENES_CATEGORIAS_DIR), convirtiéndola a WebP automáticamente si el
+ * servidor tiene GD con soporte WebP; si no, la guarda tal cual se subió.
  * Devuelve ['ok' => bool, 'nombre' => string|null, 'error' => string|null].
  */
-function guardar_imagen_subida(array $archivo): array
+function guardar_imagen_subida(array $archivo, string $directorio = IMAGENES_DIR): array
 {
     if ($archivo['error'] !== UPLOAD_ERR_OK) {
         return ['ok' => false, 'nombre' => null, 'error' => 'La subida falló. Verifica que el archivo no pase de 3 MB e intenta de nuevo.'];
@@ -111,14 +112,14 @@ function guardar_imagen_subida(array $archivo): array
         return ['ok' => false, 'nombre' => null, 'error' => 'Formato no permitido. Sube imágenes JPG, PNG o WebP.'];
     }
 
-    if (!is_dir(IMAGENES_DIR)) {
-        mkdir(IMAGENES_DIR, 0755, true);
+    if (!is_dir($directorio)) {
+        mkdir($directorio, 0755, true);
     }
 
     $base = slugify(pathinfo($archivo['name'], PATHINFO_FILENAME));
     $convertirAWebp = $mime !== 'image/webp' && function_exists('imagewebp');
     $extFinal = $convertirAWebp ? 'webp' : $ext;
-    [$nombre, $destino] = nombre_imagen_unico($base, $extFinal);
+    [$nombre, $destino] = nombre_imagen_unico($directorio, $base, $extFinal);
 
     $guardada = false;
     if ($convertirAWebp) {
@@ -134,12 +135,12 @@ function guardar_imagen_subida(array $archivo): array
     if (!$guardada) {
         // GD no disponible, formato no soportado, o ya era WebP: se guarda tal cual.
         $extFinal = $ext;
-        [$nombre, $destino] = nombre_imagen_unico($base, $extFinal);
+        [$nombre, $destino] = nombre_imagen_unico($directorio, $base, $extFinal);
         $guardada = move_uploaded_file($archivo['tmp_name'], $destino);
     }
 
     if (!$guardada) {
-        error_log('[lirios] No se pudo guardar la imagen en ' . IMAGENES_DIR . ' — revisar permisos de la carpeta.');
+        error_log('[lirios] No se pudo guardar la imagen en ' . $directorio . ' — revisar permisos de la carpeta.');
         return ['ok' => false, 'nombre' => null, 'error' => 'No se pudo guardar la foto en el servidor. Contacta a soporte técnico si el problema continúa.'];
     }
 

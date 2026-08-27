@@ -35,21 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($accion === 'guardar') {
         $idOriginal = (int) ($_POST['id_original'] ?? 0);
-        $nombre = limpiar_texto($_POST['nombre'] ?? '', 150);
-        $descripcionCorta = limpiar_texto($_POST['descripcion_corta'] ?? '', 255);
-        $descripcion = limpiar_texto($_POST['descripcion'] ?? '', 2000);
         $subcategoriaId = (int) ($_POST['subcategoria_id'] ?? 0);
-        $incluye = limpiar_texto($_POST['incluye'] ?? '', 255) ?: INCLUYE_POR_DEFECTO;
         $imagenSeleccionada = basename(limpiar_texto($_POST['imagen'] ?? '', 150));
-        $entregaDisponible = isset($_POST['entrega_disponible']) ? 1 : 0;
-        $retiroDisponible = isset($_POST['retiro_tienda_disponible']) ? 1 : 0;
-        $disponible = isset($_POST['disponible']) ? 1 : 0;
-        $destacado = isset($_POST['destacado']) ? 1 : 0;
         $precio = limpiar_precio($_POST['precio'] ?? '');
 
-        if ($nombre === '' || $descripcionCorta === '') {
-            flash('error', 'El nombre y la descripción corta son obligatorios.');
-        } elseif ($subcategoriaId <= 0) {
+        if ($subcategoriaId <= 0) {
             flash('error', 'Elige una subcategoría para el producto.');
         } elseif ($precio <= 0) {
             flash('error', 'El precio debe ser mayor que cero.');
@@ -86,33 +76,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->beginTransaction();
             try {
                 if ($idOriginal > 0) {
+                    /* Solo se editan subcategoría, imagen y precio desde este
+                       formulario simplificado — nombre, descripciones, incluye
+                       y los indicadores de entrega/destacado no se tocan. */
                     $stmt = db()->prepare(
-                        'UPDATE productos SET subcategoria_id=:sub, nombre=:nombre,
-                            descripcion_corta=:corta, descripcion=:desc, imagen=:imagen,
-                            incluye=:incluye, precio=:precio, entrega_disponible=:entrega,
-                            retiro_tienda_disponible=:retiro, disponible=:disp, destacado=:dest
+                        'UPDATE productos SET subcategoria_id=:sub, imagen=:imagen, precio=:precio
                          WHERE id=:id'
                     );
                     $stmt->execute([
-                        'sub' => $subcategoriaId, 'nombre' => $nombre, 'corta' => $descripcionCorta,
-                        'desc' => $descripcion, 'imagen' => $rutaImagen, 'incluye' => $incluye,
-                        'precio' => $precio, 'entrega' => $entregaDisponible, 'retiro' => $retiroDisponible,
-                        'disp' => $disponible, 'dest' => $destacado, 'id' => $idOriginal,
+                        'sub' => $subcategoriaId, 'imagen' => $rutaImagen,
+                        'precio' => $precio, 'id' => $idOriginal,
                     ]);
                     $msj = 'Producto actualizado.';
                 } else {
+                    /* Nombre automático ("Subcategoría N") porque el formulario ya
+                       no pide nombre — el catálogo público solo muestra el precio,
+                       este nombre es interno (URL, título de la ficha, listas del
+                       panel) y se puede corregir después editando el producto. */
+                    $subNombreStmt = db()->prepare('SELECT nombre FROM subcategorias WHERE id = ?');
+                    $subNombreStmt->execute([$subcategoriaId]);
+                    $subNombre = $subNombreStmt->fetchColumn() ?: 'Producto';
+
+                    $conteoStmt = db()->prepare('SELECT COUNT(*) FROM productos WHERE subcategoria_id = ?');
+                    $conteoStmt->execute([$subcategoriaId]);
+                    $nombre = $subNombre . ' ' . ((int) $conteoStmt->fetchColumn() + 1);
+
                     $slug = slug_unico('productos', slugify($nombre));
                     $stmt = db()->prepare(
                         'INSERT INTO productos
-                            (subcategoria_id, slug, nombre, descripcion_corta, descripcion, imagen,
+                            (subcategoria_id, slug, nombre, descripcion_corta, imagen,
                              incluye, precio, entrega_disponible, retiro_tienda_disponible, disponible, destacado)
-                         VALUES (:sub, :slug, :nombre, :corta, :desc, :imagen, :incluye, :precio, :entrega, :retiro, :disp, :dest)'
+                         VALUES (:sub, :slug, :nombre, :corta, :imagen, :incluye, :precio, 1, 1, 1, 0)'
                     );
                     $stmt->execute([
                         'sub' => $subcategoriaId, 'slug' => $slug, 'nombre' => $nombre,
-                        'corta' => $descripcionCorta, 'desc' => $descripcion, 'imagen' => $rutaImagen,
-                        'incluye' => $incluye, 'precio' => $precio, 'entrega' => $entregaDisponible, 'retiro' => $retiroDisponible,
-                        'disp' => $disponible, 'dest' => $destacado,
+                        'corta' => $nombre, 'imagen' => $rutaImagen,
+                        'incluye' => INCLUYE_POR_DEFECTO, 'precio' => $precio,
                     ]);
                     $msj = 'Producto agregado al catálogo.';
                 }
@@ -129,7 +128,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if ($accion === 'guardar_rapido') {
+    /* Carga rápida deshabilitada a pedido de la clienta (2026-08-26) — el
+       código se deja intacto (comentado, no borrado) por si se necesita
+       reactivar más adelante. Ver también el bloque HTML del formulario,
+       envuelto en "<?php if (false): ?>" más abajo. */
+    if (false && $accion === 'guardar_rapido') {
         $subcategoriaId = (int) ($_POST['subcategoria_id_rapido'] ?? 0);
         $nombresPost = $_POST['nombre_rapido'] ?? [];
         $preciosPost = $_POST['precio_rapido'] ?? [];
@@ -263,10 +266,6 @@ admin_header('Productos del catálogo', 'productos.php');
 
     <div class="form-grid">
       <div>
-        <label for="nombre">Nombre *</label>
-        <input type="text" id="nombre" name="nombre" required maxlength="150" value="<?= e($editando['nombre'] ?? '') ?>">
-      </div>
-      <div>
         <label for="subcategoria_id">Categoría / Subcategoría *</label>
         <select id="subcategoria_id" name="subcategoria_id" required>
           <option value="">— Elegir —</option>
@@ -278,6 +277,10 @@ admin_header('Productos del catálogo', 'productos.php');
             </optgroup>
           <?php endforeach; ?>
         </select>
+      </div>
+      <div>
+        <label for="precio">Precio (L.) *</label>
+        <input type="number" id="precio" name="precio" min="0" step="0.01" required placeholder="L." value="<?= e($editando['precio'] ?? '') ?>">
       </div>
       <div class="full">
         <label for="imagen_archivo">Foto del producto</label>
@@ -301,34 +304,6 @@ admin_header('Productos del catálogo', 'productos.php');
         </select>
         <small><a href="subir-imagen.php">Ver galería de fotos ↗</a></small>
       </div>
-      <div class="full">
-        <label for="descripcion_corta">Descripción corta * <small>(flores principales, se muestra en la tarjeta)</small></label>
-        <input type="text" id="descripcion_corta" name="descripcion_corta" required maxlength="255" value="<?= e($editando['descripcion_corta'] ?? '') ?>">
-      </div>
-      <div class="full">
-        <label for="descripcion">Descripción completa</label>
-        <textarea id="descripcion" name="descripcion" maxlength="2000"><?= e($editando['descripcion'] ?? '') ?></textarea>
-      </div>
-      <div class="full">
-        <label for="incluye">Incluye</label>
-        <input type="text" id="incluye" name="incluye" maxlength="255" value="<?= e($editando['incluye'] ?? INCLUYE_POR_DEFECTO) ?>">
-      </div>
-
-      <div>
-        <label for="precio">Precio (L.) *</label>
-        <input type="number" id="precio" name="precio" min="0" step="0.01" required placeholder="L." value="<?= e($editando['precio'] ?? '') ?>">
-      </div>
-
-      <div>
-        <label>&nbsp;</label>
-        <label class="check-row"><input type="checkbox" name="entrega_disponible" <?= (!$editando || !empty($editando['entrega_disponible'])) ? 'checked' : '' ?>> Entrega a domicilio</label>
-        <label class="check-row"><input type="checkbox" name="retiro_tienda_disponible" <?= (!$editando || !empty($editando['retiro_tienda_disponible'])) ? 'checked' : '' ?>> Retiro en tienda</label>
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <label class="check-row"><input type="checkbox" name="disponible" <?= (!$editando || !empty($editando['disponible'])) ? 'checked' : '' ?>> Disponible en el catálogo</label>
-        <label class="check-row"><input type="checkbox" name="destacado" <?= !empty($editando['destacado']) ? 'checked' : '' ?>> Destacado en la portada</label>
-      </div>
     </div>
 
     <button type="submit" class="btn"><?= $editando ? 'Guardar cambios' : 'Agregar producto' ?></button>
@@ -338,6 +313,10 @@ admin_header('Productos del catálogo', 'productos.php');
   </form>
 </div>
 
+<?php /* Carga rápida deshabilitada a pedido de la clienta (2026-08-26) — ver
+        nota junto a "guardar_rapido" arriba. Bloque comentado (if false),
+        no borrado, por si se necesita reactivar más adelante. */ ?>
+<?php if (false): ?>
 <div class="panel">
   <h2>Carga rápida (varios productos a la vez)</h2>
   <p class="intro">Para cargar el catálogo rápido: elige una categoría/subcategoría (aplica a todas las filas) y escribe el nombre, precio y, si quieres, la foto de cada producto. Después puedes editarlos uno por uno para sumarles descripción.</p>
@@ -408,6 +387,7 @@ admin_header('Productos del catálogo', 'productos.php');
     });
   })();
 </script>
+<?php endif; ?>
 
 <div class="panel">
   <h2>Catálogo actual (<?= count($productos) ?>)</h2>
@@ -448,12 +428,14 @@ admin_header('Productos del catálogo', 'productos.php');
                   <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
                   <button type="submit" class="btn mini secundario"><?= !empty($p['disponible']) ? 'Marcar agotado' : 'Marcar disponible' ?></button>
                 </form>
-                <form class="inline" method="post" action="productos.php" onsubmit="return confirm('¿Eliminar «<?= e($p['nombre']) ?>» del catálogo?');">
+                <form class="inline" id="del-prod-<?= (int) $p['id'] ?>" method="post" action="productos.php">
                   <?= csrf_field() ?>
                   <input type="hidden" name="accion" value="eliminar">
                   <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
-                  <button type="submit" class="btn mini peligro">Eliminar</button>
                 </form>
+                <button type="button" class="btn mini peligro"
+                  data-confirmar-eliminar="del-prod-<?= (int) $p['id'] ?>"
+                  data-confirmar-mensaje="¿Eliminar «<?= e($p['nombre']) ?>» del catálogo? Esta acción no se puede deshacer.">Eliminar</button>
               </div>
             </td>
           </tr>

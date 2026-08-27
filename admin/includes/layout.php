@@ -51,7 +51,7 @@ function admin_header(string $titulo, string $activo = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800&family=Arimo:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css?v=11">
+  <link rel="stylesheet" href="../css/admin.css?v=12">
 </head>
 <body class="admin-shell">
 
@@ -98,7 +98,25 @@ function admin_header(string $titulo, string $activo = ''): void
 
 function admin_footer(): void
 {
-    echo "  </div>\n</body>\n</html>";
+    ?>
+  </div>
+
+  <!-- Modal de confirmación compartido (eliminar producto/categoría/subcategoría,
+       ver data-confirmar-eliminar en cada tabla y admin.js). Uno solo por página,
+       en vez de uno por fila, para no duplicar dialogs en tablas largas. -->
+  <dialog class="modal-confirmar" id="modal-confirmar">
+    <h3>Confirmar</h3>
+    <p data-confirmar-mensaje-texto></p>
+    <div class="modal-confirmar-acciones">
+      <button type="button" class="btn mini secundario" data-cerrar-modal>Cancelar</button>
+      <button type="button" class="btn mini peligro" data-confirmar-boton>Sí, eliminar</button>
+    </div>
+  </dialog>
+
+  <script src="../js/admin.js?v=1"></script>
+</body>
+</html>
+    <?php
 }
 
 /* ---------- Mensajes flash (un solo uso, guardados en sesión) ---------- */
@@ -108,12 +126,32 @@ function flash(string $tipo, string $mensaje): void
     $_SESSION['flash'] = ['tipo' => $tipo, 'mensaje' => $mensaje];
 }
 
+/**
+ * Muestra el mensaje flash guardado en sesión (si hay). Los errores se
+ * muestran en un modal bloqueante (hay que confirmar "Entendido" — no se
+ * quiere que un error de guardado pase inadvertido); los mensajes "ok" se
+ * muestran en un toast que se cierra solo, para no interrumpir con un
+ * clic extra en cada guardado exitoso (son la mayoría de las acciones
+ * del panel). Ambos se abren/cierran desde admin.js.
+ */
 function mostrar_flash(): void
 {
-    if (!empty($_SESSION['flash'])) {
-        $f = $_SESSION['flash'];
-        unset($_SESSION['flash']);
-        $clase = $f['tipo'] === 'ok' ? 'ok' : 'error';
-        echo '<div class="flash ' . $clase . '">' . e($f['mensaje']) . '</div>';
+    if (empty($_SESSION['flash'])) {
+        return;
+    }
+    $f = $_SESSION['flash'];
+    unset($_SESSION['flash']);
+
+    if ($f['tipo'] === 'error') {
+        echo '<dialog class="modal-alerta error" id="alerta-flash">'
+            . '<div class="modal-alerta-icono">✕</div>'
+            . '<h3>Ocurrió un problema</h3>'
+            . '<p>' . e($f['mensaje']) . '</p>'
+            . '<div class="modal-alerta-acciones"><button type="button" class="btn mini" data-cerrar-modal>Entendido</button></div>'
+            . '</dialog>';
+    } else {
+        echo '<div class="toast-flash ok" id="toast-flash" role="status">'
+            . '<span class="toast-flash-icono">✓</span> ' . e($f['mensaje'])
+            . '</div>';
     }
 }

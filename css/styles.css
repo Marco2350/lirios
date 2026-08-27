@@ -937,20 +937,6 @@ p {
   margin-bottom: 0.15rem;
 }
 
-.product-card h3 {
-  font-size: 1rem;
-  line-height: 1.25;
-  margin: 0 1.25rem 0.3rem;
-  padding-right: 0.4rem;
-  text-transform: uppercase;
-  letter-spacing: 0.015em;
-  font-weight: 800;
-}
-
-.product-card h3 a {
-  color: inherit;
-}
-
 .card-price {
   font-size: 0.95rem;
   font-weight: 500;

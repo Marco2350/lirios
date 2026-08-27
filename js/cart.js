@@ -25,10 +25,8 @@ export function formatPrice(monto) {
  * WhatsApp y el negocio identifique el ramo exacto desde el reporte de
  * códigos en /admin/codigos.php, sin depender del id autoincremental de
  * la base de datos (que todavía no existe cuando se arma el mensaje).
- * Exportada para que productos.js pueda mostrarla en la tarjeta pública
- * antes de que el producto se agregue al carrito.
  */
-export function codigoRamo(key) {
+function codigoRamo(key) {
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     hash = (Math.imul(hash, 31) + key.charCodeAt(i)) >>> 0;
