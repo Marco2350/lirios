@@ -266,6 +266,10 @@ async function initCategoryPage() {
 
   function renderChips() {
     if (!chipsWrap) return;
+    if (slug === 'arreglos-en-base') {
+      chipsWrap.style.display = 'none';
+      return;
+    }
     const opciones = [{ slug: '', nombre: 'Todas' }, ...(categoria.subcategorias || [])];
     chipsWrap.innerHTML = opciones
       .map(
