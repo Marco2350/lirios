@@ -22,6 +22,9 @@ function admin_icono(string $nombre): string
         'externo' => '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',
         'check' => '<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.3 2.3L16 9.8"/>',
         'chevron' => '<path d="m9 6 6 6-6 6"/>',
+        'filtro' => '<path d="M4 5h16l-6.2 7.2v5.3l-3.6 1.9v-7.2Z"/>',
+        'buscar' => '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.6-3.6"/>',
+        'cerrar' => '<path d="M6 6l12 12M18 6 6 18"/>',
     ];
     $d = $trazos[$nombre] ?? '';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" '
@@ -51,7 +54,7 @@ function admin_header(string $titulo, string $activo = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800&family=Arimo:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css?v=12">
+  <link rel="stylesheet" href="../css/admin.css?v=14">
 </head>
 <body class="admin-shell">
 

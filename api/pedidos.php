@@ -47,42 +47,6 @@ function limpiar(?string $texto, int $max): ?string
     return $texto === '' ? null : $texto;
 }
 
-/**
- * Avisa por correo al negocio de un pedido nuevo, además de WhatsApp.
- * Nunca lanza error ni bloquea la respuesta: si el hosting no tiene
- * correo saliente configurado, el pedido igual quedó guardado en BD.
- */
-function notificar_pedido_por_correo(int $pedidoId, ?string $cliente, ?string $nota, array $items, float $total, array $entrega): void
-{
-    try {
-        $lineas = array_map(
-            fn($i) => "{$i['cantidad']}x {$i['nombre']}" . ($i['detalle'] ? " ({$i['detalle']})" : '') . " - L. " . number_format($i['precio'], 2),
-            $items
-        );
-
-        $cuerpo = "Nuevo pedido #{$pedidoId} desde el sitio web\n\n"
-            . implode("\n", $lineas)
-            . "\n\nTotal: L. " . number_format($total, 2)
-            . "\nCliente: " . ($cliente ?: '(sin nombre)')
-            . "\nTeléfono: " . ($entrega['telefono'] ?: '(sin especificar)')
-            . "\nEntrega: " . ($entrega['fecha_entrega'] ?: '(sin especificar)') . " / Hora: " . ($entrega['hora_entrega'] ?: '(sin especificar)')
-            . "\nDelivery o retiro: " . ($entrega['tipo_entrega'] ?: '(sin especificar)')
-            . "\nDirección: " . ($entrega['direccion'] ?: '(sin especificar)')
-            . "\nDedicatoria: " . ($entrega['dedicatoria'] ?: '(sin especificar)')
-            . "\nPago: " . ($entrega['forma_pago'] ?: '(sin especificar)')
-            . "\nNota: " . ($nota ?: '(sin nota)')
-            . "\n\nEste pedido también se envió por WhatsApp; revisa el panel /admin/pedidos.php para más detalle.";
-
-        $asunto = "Nuevo pedido #{$pedidoId} - LIRIOS Floristería";
-        $cabeceras = "Content-Type: text/plain; charset=UTF-8\r\nFrom: LIRIOS Floristería <no-responder@liriosfloristeria.com>";
-
-        @mail(NOTIFICACION_EMAIL, $asunto, $cuerpo, $cabeceras);
-    } catch (Throwable $e) {
-        // Silencioso a propósito: perder la notificación por correo no debe
-        // afectar el registro del pedido, que ya se guardó en la BD.
-    }
-}
-
 $crudo = file_get_contents('php://input');
 $datos = json_decode($crudo, true);
 
@@ -207,16 +171,6 @@ try {
     }
 
     db()->commit();
-
-    notificar_pedido_por_correo($pedidoId, $cliente, $nota, $itemsValidados, $total, [
-        'telefono' => $telefono,
-        'fecha_entrega' => $fechaEntrega,
-        'hora_entrega' => $horaEntrega,
-        'tipo_entrega' => $tipoEntrega,
-        'direccion' => $direccion,
-        'dedicatoria' => $dedicatoria,
-        'forma_pago' => $pago,
-    ]);
 
     http_response_code(201);
     echo json_encode(['ok' => true, 'id' => $pedidoId]);

@@ -242,15 +242,107 @@ if (!empty($_GET['editar'])) {
     $editando = $stmt->fetch() ?: null;
 }
 
-/* ---------- Catálogo actual (para la tabla) ---------- */
+/* ---------- Catálogo actual (para la tabla), con filtros ---------- */
 
-$productos = db()->query(
-    'SELECT p.*, c.nombre AS categoria_nombre, s.nombre AS subcategoria_nombre
+$totalProductos = (int) db()->query('SELECT COUNT(*) FROM productos')->fetchColumn();
+
+$categoriasFiltro = db()->query('SELECT id, nombre FROM categorias ORDER BY orden')->fetchAll();
+
+$fCategoria = (int) ($_GET['f_categoria'] ?? 0);
+$fSubcategoria = (int) ($_GET['f_subcategoria'] ?? 0);
+$fEstado = $_GET['f_estado'] ?? '';
+$fQ = trim((string) ($_GET['f_q'] ?? ''));
+$hayFiltros = $fCategoria > 0 || $fSubcategoria > 0 || $fEstado !== '' || $fQ !== '';
+
+$where = [];
+$params = [];
+if ($fCategoria > 0) {
+    $where[] = 'c.id = :f_categoria';
+    $params['f_categoria'] = $fCategoria;
+}
+if ($fSubcategoria > 0) {
+    $where[] = 's.id = :f_subcategoria';
+    $params['f_subcategoria'] = $fSubcategoria;
+}
+if ($fEstado === '1' || $fEstado === '0') {
+    $where[] = 'p.disponible = :f_estado';
+    $params['f_estado'] = $fEstado;
+}
+if ($fQ !== '') {
+    $where[] = 'p.nombre LIKE :f_q';
+    $params['f_q'] = '%' . $fQ . '%';
+}
+
+$sqlProductos = 'SELECT p.*, c.id AS categoria_id, c.nombre AS categoria_nombre, s.nombre AS subcategoria_nombre
      FROM productos p
      JOIN subcategorias s ON s.id = p.subcategoria_id
-     JOIN categorias c ON c.id = s.categoria_id
-     ORDER BY p.nombre'
-)->fetchAll();
+     JOIN categorias c ON c.id = s.categoria_id';
+if ($where) {
+    $sqlProductos .= ' WHERE ' . implode(' AND ', $where);
+}
+$sqlProductos .= ' ORDER BY p.nombre';
+
+$stmtProductos = db()->prepare($sqlProductos);
+$stmtProductos->execute($params);
+$productos = $stmtProductos->fetchAll();
+
+/* Mismo criterio del <select> "Agregar producto" (nota 2026-09-01, ocultar
+   "General"): categorías con una sola subcategoría se identifican por el
+   nombre de la categoría; el resto muestra "Categoría — Subcategoría". Se
+   arma una sola vez y se reutiliza en el <select> de subcategoría y en las
+   píldoras de filtros activos. */
+$subFiltroLabel = [];
+foreach ($subcategoriasPorCategoria as $catNombre => $subs) {
+    if (count($subs) === 1) {
+        $subFiltroLabel[(int) $subs[0]['id']] = $catNombre;
+    } else {
+        foreach ($subs as $s) {
+            $subFiltroLabel[(int) $s['id']] = $catNombre . ' — ' . $s['nombre'];
+        }
+    }
+}
+
+/* Cascada categoría → subcategoría: si ya se filtró por categoría, el
+   <select> de subcategoría solo enseña las suyas (menos ruido, más
+   intuitivo) — se resetea a "Todas" en el navegador vía JS cuando cambia
+   la categoría (ver script más abajo), así los dos filtros no chocan. */
+$catNombrePorId = array_column($categoriasFiltro, 'nombre', 'id');
+$subcategoriasParaFiltro = $subcategoriasPorCategoria;
+if ($fCategoria > 0 && isset($catNombrePorId[$fCategoria])) {
+    $catNombreFiltro = $catNombrePorId[$fCategoria];
+    $subcategoriasParaFiltro = isset($subcategoriasPorCategoria[$catNombreFiltro])
+        ? [$catNombreFiltro => $subcategoriasPorCategoria[$catNombreFiltro]]
+        : [];
+}
+
+/* Píldoras de filtros activos: cada una enlaza a la misma vista sin ese
+   filtro puntual, para poder quitarlos de a uno sin perder los demás.
+   El "#form-filtros" al final es a propósito (ver también la <form> y el
+   link "Limpiar" más abajo): sin él, cada filtro recargaba la página
+   entera y el navegador volvía al tope — con el ancla, aterriza de
+   vuelta justo en la barra de filtros. */
+function quitar_filtro_url(string $param): string
+{
+    $q = $_GET;
+    unset($q[$param], $q['editar']);
+    return 'productos.php' . ($q ? ('?' . http_build_query($q)) : '') . '#form-filtros';
+}
+
+$chipsFiltro = [];
+if ($fCategoria > 0 && isset($catNombrePorId[$fCategoria])) {
+    $chipsFiltro[] = ['label' => 'Categoría: ' . $catNombrePorId[$fCategoria], 'param' => 'f_categoria'];
+}
+if ($fSubcategoria > 0 && isset($subFiltroLabel[$fSubcategoria])) {
+    $chipsFiltro[] = ['label' => 'Subcategoría: ' . $subFiltroLabel[$fSubcategoria], 'param' => 'f_subcategoria'];
+}
+if ($fEstado === '1') {
+    $chipsFiltro[] = ['label' => 'Estado: Disponible', 'param' => 'f_estado'];
+} elseif ($fEstado === '0') {
+    $chipsFiltro[] = ['label' => 'Estado: Agotado', 'param' => 'f_estado'];
+}
+if ($fQ !== '') {
+    $chipsFiltro[] = ['label' => 'Buscar: "' . $fQ . '"', 'param' => 'f_q'];
+}
 
 admin_header('Productos del catálogo', 'productos.php');
 ?>
@@ -270,11 +362,18 @@ admin_header('Productos del catálogo', 'productos.php');
         <select id="subcategoria_id" name="subcategoria_id" required>
           <option value="">— Elegir —</option>
           <?php foreach ($subcategoriasPorCategoria as $catNombre => $subs): ?>
-            <optgroup label="<?= e($catNombre) ?>">
-              <?php foreach ($subs as $s): ?>
-                <option value="<?= (int) $s['id'] ?>" <?= (int)($editando['subcategoria_id'] ?? 0) === (int)$s['id'] ? 'selected' : '' ?>><?= e($s['nombre']) ?></option>
-              <?php endforeach; ?>
-            </optgroup>
+            <?php if (count($subs) === 1): ?>
+              <?php /* Categoría sin subclasificación real: se muestra como una sola
+                      opción con el nombre de la categoría, sin exponer la subcategoría
+                      interna "General" que solo existe para cumplir la FK NOT NULL. */ ?>
+              <option value="<?= (int) $subs[0]['id'] ?>" <?= (int)($editando['subcategoria_id'] ?? 0) === (int)$subs[0]['id'] ? 'selected' : '' ?>><?= e($catNombre) ?></option>
+            <?php else: ?>
+              <optgroup label="<?= e($catNombre) ?>">
+                <?php foreach ($subs as $s): ?>
+                  <option value="<?= (int) $s['id'] ?>" <?= (int)($editando['subcategoria_id'] ?? 0) === (int)$s['id'] ? 'selected' : '' ?>><?= e($s['nombre']) ?></option>
+                <?php endforeach; ?>
+              </optgroup>
+            <?php endif; ?>
           <?php endforeach; ?>
         </select>
       </div>
@@ -330,11 +429,15 @@ admin_header('Productos del catálogo', 'productos.php');
         <select id="subcategoria_id_rapido" name="subcategoria_id_rapido" required>
           <option value="">— Elegir —</option>
           <?php foreach ($subcategoriasPorCategoria as $catNombre => $subs): ?>
-            <optgroup label="<?= e($catNombre) ?>">
-              <?php foreach ($subs as $s): ?>
-                <option value="<?= (int) $s['id'] ?>"><?= e($s['nombre']) ?></option>
-              <?php endforeach; ?>
-            </optgroup>
+            <?php if (count($subs) === 1): ?>
+              <option value="<?= (int) $subs[0]['id'] ?>"><?= e($catNombre) ?></option>
+            <?php else: ?>
+              <optgroup label="<?= e($catNombre) ?>">
+                <?php foreach ($subs as $s): ?>
+                  <option value="<?= (int) $s['id'] ?>"><?= e($s['nombre']) ?></option>
+                <?php endforeach; ?>
+              </optgroup>
+            <?php endif; ?>
           <?php endforeach; ?>
         </select>
       </div>
@@ -390,7 +493,71 @@ admin_header('Productos del catálogo', 'productos.php');
 <?php endif; ?>
 
 <div class="panel">
-  <h2>Catálogo actual (<?= count($productos) ?>)</h2>
+  <h2>Catálogo actual (<?= $hayFiltros ? count($productos) . ' de ' . $totalProductos : $totalProductos ?>)</h2>
+
+  <?php /* action lleva "#form-filtros": los <select> de abajo se auto-envían
+          al cambiar (this.form.submit()), y sin el ancla cada filtro recargaba
+          la página entera devolviendo el scroll al tope — con el ancla el
+          navegador aterriza de vuelta justo aquí. */ ?>
+  <form method="get" action="productos.php#form-filtros" class="filtros-toolbar" id="form-filtros">
+    <div class="filtro-campo">
+      <label for="f_categoria">Categoría</label>
+      <select id="f_categoria" name="f_categoria" onchange="document.getElementById('f_subcategoria').value=''; this.form.submit();">
+        <option value="">Todas</option>
+        <?php foreach ($categoriasFiltro as $c): ?>
+          <option value="<?= (int) $c['id'] ?>" <?= $fCategoria === (int) $c['id'] ? 'selected' : '' ?>><?= e($c['nombre']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="filtro-campo">
+      <label for="f_subcategoria">Subcategoría</label>
+      <select id="f_subcategoria" name="f_subcategoria" onchange="this.form.submit()">
+        <option value="">Todas</option>
+        <?php foreach ($subcategoriasParaFiltro as $catNombre => $subs): ?>
+          <?php if (count($subs) === 1): ?>
+            <option value="<?= (int) $subs[0]['id'] ?>" <?= $fSubcategoria === (int) $subs[0]['id'] ? 'selected' : '' ?>><?= e($catNombre) ?></option>
+          <?php else: ?>
+            <optgroup label="<?= e($catNombre) ?>">
+              <?php foreach ($subs as $s): ?>
+                <option value="<?= (int) $s['id'] ?>" <?= $fSubcategoria === (int) $s['id'] ? 'selected' : '' ?>><?= e($s['nombre']) ?></option>
+              <?php endforeach; ?>
+            </optgroup>
+          <?php endif; ?>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="filtro-campo">
+      <label for="f_estado">Estado</label>
+      <select id="f_estado" name="f_estado" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        <option value="1" <?= $fEstado === '1' ? 'selected' : '' ?>>Disponible</option>
+        <option value="0" <?= $fEstado === '0' ? 'selected' : '' ?>>Agotado</option>
+      </select>
+    </div>
+    <div class="filtro-campo filtro-buscar">
+      <label for="f_q">Buscar por nombre</label>
+      <div class="search-input-wrap">
+        <?= admin_icono('buscar') ?>
+        <input type="text" id="f_q" name="f_q" placeholder="Nombre del producto…" value="<?= e($fQ) ?>">
+      </div>
+    </div>
+    <div class="filtro-acciones">
+      <button type="submit" class="btn mini"><?= admin_icono('filtro') ?> Filtrar</button>
+      <?php if ($hayFiltros): ?>
+        <a class="btn mini secundario" href="productos.php#form-filtros"><?= admin_icono('cerrar') ?> Limpiar</a>
+      <?php endif; ?>
+    </div>
+  </form>
+
+  <?php if ($chipsFiltro): ?>
+    <div class="filtro-chips">
+      <?php foreach ($chipsFiltro as $chip): ?>
+        <a class="filtro-chip" href="<?= e(quitar_filtro_url($chip['param'])) ?>"><?= e($chip['label']) ?> <span aria-hidden="true">✕</span></a>
+      <?php endforeach; ?>
+      <a class="filtro-chip filtro-chip-limpiar" href="productos.php#form-filtros">Limpiar todo</a>
+    </div>
+  <?php endif; ?>
+
   <div class="tabla-scroll">
     <table class="tabla">
       <thead>
@@ -406,7 +573,7 @@ admin_header('Productos del catálogo', 'productos.php');
       </thead>
       <tbody>
         <?php if (!$productos): ?>
-          <tr><td colspan="7">Aún no hay productos. Agrega el primero con el formulario de arriba.</td></tr>
+          <tr><td colspan="7"><?= $hayFiltros ? 'Ningún producto coincide con los filtros elegidos.' : 'Aún no hay productos. Agrega el primero con el formulario de arriba.' ?></td></tr>
         <?php endif; ?>
         <?php foreach ($productos as $p): ?>
           <tr>
@@ -416,7 +583,7 @@ admin_header('Productos del catálogo', 'productos.php');
               <?php if (!empty($p['destacado'])): ?> <span class="badge destacado">Destacado</span><?php endif; ?>
             </td>
             <td><?= e($p['categoria_nombre']) ?></td>
-            <td><?= e($p['subcategoria_nombre']) ?></td>
+            <td><?= $p['subcategoria_nombre'] === 'General' ? '—' : e($p['subcategoria_nombre']) ?></td>
             <td>L. <?= number_format((float) $p['precio'], 2) ?></td>
             <td><span class="badge <?= !empty($p['disponible']) ? 'si' : 'no' ?>"><?= !empty($p['disponible']) ? 'Disponible' : 'Agotado' ?></span></td>
             <td>

@@ -266,7 +266,9 @@ async function initCategoryPage() {
 
   function renderChips() {
     if (!chipsWrap) return;
-    if (slug === 'arreglos-en-base') {
+    // Con una sola subcategoría (o ninguna) no hay nada que filtrar — se oculta
+    // la fila de chips en vez de mostrar un único botón inútil ("Todas" + 1 más).
+    if ((categoria.subcategorias || []).length <= 1) {
       chipsWrap.style.display = 'none';
       return;
     }
@@ -343,6 +345,13 @@ async function initProductDetail() {
 
   document.title = `${producto.nombre} — LIRIOS Floristería`;
 
+  // "General" es solo un valor interno para categorías sin subclasificación
+  // real (ver CLAUDE.md) — nunca debe mostrarse al público, se usa el nombre
+  // de la categoría en su lugar.
+  const ocasion = producto.subcategoria?.nombre && producto.subcategoria.nombre !== 'General'
+    ? producto.subcategoria.nombre
+    : producto.categoria?.nombre || '';
+
   const disponibilidad = producto.disponible
     ? '<span class="availability">✓ Disponible para pedido</span>'
     : '<span class="availability out">Agotado por el momento</span>';
@@ -358,7 +367,7 @@ async function initProductDetail() {
         <img src="${escapeHtml(producto.imagen || 'images/logo.png')}" alt="${escapeHtml(producto.nombre)}">
       </div>
       <div class="product-info">
-        <p class="card-occasion">${escapeHtml(producto.subcategoria?.nombre || producto.categoria?.nombre || '')}</p>
+        <p class="card-occasion">${escapeHtml(ocasion)}</p>
         <h1>${escapeHtml(producto.nombre)}</h1>
         <p class="product-price" id="detail-price">${formatPrice(producto.precio)}</p>
         <p class="desc">${escapeHtml(producto.descripcion || producto.descripcionCorta)}</p>

@@ -16,16 +16,6 @@ define('DB_NAME', env('DB_NAME', 'lirios'));
 define('DB_USER', env('DB_USER', 'root'));
 define('DB_PASS', env('DB_PASS', ''));
 
-/**
- * ⚠️ Correo donde llega el aviso de cada pedido nuevo (además de WhatsApp).
- * Se define en .env como NOTIFICACION_EMAIL; si no está presente, se usa
- * este placeholder. En hosting compartido normal (cPanel) la función
- * mail() de PHP funciona sin configuración extra; en XAMPP local no envía
- * nada salvo que se configure un servidor SMTP — es normal que en
- * desarrollo esta notificación "falle" en silencio.
- */
-define('NOTIFICACION_EMAIL', env('NOTIFICACION_EMAIL', 'pedidos@liriosfloristeria.com'));
-
 function db(): PDO
 {
     static $pdo = null;

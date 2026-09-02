@@ -15,17 +15,21 @@ function formatFecha(fechaISO) {
 }
 
 /**
- * Ruta relativa guardada en BD (ej. "images/productos/xxx.webp") → URL
- * absoluta, para que el enlace funcione fuera del sitio (dentro de
- * WhatsApp). Se resuelve contra location.href, no location.origin: el
- * sitio es de estructura plana (todas las páginas públicas y /images
+ * URL absoluta y corta a la foto de un producto, vía foto.php (redirect
+ * del lado del servidor — ver la nota en ese archivo). Antes este enlace
+ * era la ruta completa a la imagen (".../images/productos/<uuid>.webp"):
+ * un link largo que un cliente recibió cortado justo antes del ".webp"
+ * final y no pudo ver la foto (2026-09-01). "foto.php?p=<slug>" no
+ * termina en una extensión que se pueda perder al copiar/reenviar el
+ * mensaje. Se resuelve contra location.href, no location.origin: el
+ * sitio es de estructura plana (todas las páginas públicas y foto.php
  * viven en la misma carpeta), así que esto funciona igual si el sitio
  * está publicado en la raíz del dominio o en una subcarpeta (como en
  * este entorno de desarrollo, /PROYECTOS-PHP/lirios/).
  */
-function absoluteUrl(rutaRelativa) {
+function fotoUrl(slug) {
   try {
-    return new URL(rutaRelativa, location.href).href;
+    return new URL(`foto.php?p=${encodeURIComponent(slug)}`, location.href).href;
   } catch {
     return null;
   }
@@ -74,7 +78,7 @@ export function buildOrderMessage(cart, total, datosCliente = {}) {
 /** Enlaces a la(s) foto(s) real(es) del/los arreglo(s) elegido(s), para que quien reciba el mensaje vea exactamente qué se pidió. */
 function buildReferenciaLineas(cart) {
   const conFoto = cart
-    .map((item) => ({ nombre: item.nombre, url: item.imagen ? absoluteUrl(item.imagen) : null }))
+    .map((item) => ({ nombre: item.nombre, url: item.imagen && item.id ? fotoUrl(item.id) : null }))
     .filter((item) => item.url);
 
   if (conFoto.length === 0) return ['*Referencia del arreglo:* (sin foto disponible)'];
