@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=31">
+  <link rel="stylesheet" href="css/styles.css?v=34">
 </head>
 <body>
 
@@ -79,6 +79,10 @@
 
         <aside class="cart-summary">
           <h2>Resumen del pedido</h2>
+          <div class="cart-total-row cart-subtotal-row">
+            <span>Subtotal</span>
+            <span class="amount-sm" id="cart-subtotal">L. 0.00</span>
+          </div>
           <div class="cart-total-row">
             <span>Total</span>
             <span class="amount" id="cart-total">L. 0.00</span>
@@ -104,7 +108,10 @@
               </div>
               <div class="form-field">
                 <label for="customer-delivery-time">Hora</label>
-                <input type="time" id="customer-delivery-time">
+                <select id="customer-delivery-time">
+                  <option value="">Elige primero la fecha</option>
+                </select>
+                <small class="field-hint">Hora aproximada dentro de nuestro horario — te la confirmamos por WhatsApp según disponibilidad.</small>
               </div>
             </div>
             <div class="form-field">
@@ -115,6 +122,7 @@
                 <option value="Retiro en tienda">Retiro en tienda</option>
               </select>
             </div>
+
             <div class="form-field">
               <label for="customer-address">Dirección de entrega</label>
               <input type="text" id="customer-address" maxlength="200" placeholder="Ej: Barrio El Centro, 2da calle, casa color celeste" autocomplete="street-address">
@@ -212,6 +220,7 @@
         '<div class="proto-warning">Estás abriendo este archivo directamente, por eso el catálogo y el carrito no funcionan. Abre el sitio desde XAMPP: <a href="http://localhost/PROYECTOS-PHP/lirios/">http://localhost/PROYECTOS-PHP/lirios/</a></div>');
     }
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.26.25/sweetalert2.all.min.js" integrity="sha512-TA1p+I1AtmUN2QnvpJT01/hjvxCxjyBfXtNuKNnvvwyCaQpdl5JUfiJ7geQtMnJ55myntTq5JwPLiH3j6e222A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script type="module" src="js/main.js?v=8"></script>
 </body>
 </html>

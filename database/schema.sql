@@ -84,21 +84,44 @@ CREATE TABLE productos (
 -- Alimentan la reportería de ventas del panel admin.
 -- ---------------------------------------------------------
 
+-- Zonas de delivery (2026-09-03): la clienta pedía cobrar el delivery
+-- según la zona del cliente en vez de un monto fijo único. Cada zona es
+-- un polígono dibujado a mano en /admin/zonas-delivery.php sobre un mapa
+-- de El Progreso (Leaflet + OpenStreetMap, sin API key) y tiene su propio
+-- precio. En carrito.html el cliente arrastra un pin sobre el mapa; el
+-- sitio detecta en qué polígono cae ese punto (point-in-polygon) y aplica
+-- el precio de esa zona. Si el pin no cae en ninguna zona, no se permite
+-- continuar — se le pide al cliente coordinar la entrega directo por
+-- WhatsApp (decisión de negocio, ver notas en el CLAUDE.md raíz).
+CREATE TABLE zonas_delivery (
+  id        INT AUTO_INCREMENT PRIMARY KEY,
+  nombre    VARCHAR(100) NOT NULL,
+  precio    DECIMAL(10,2) NOT NULL,
+  poligono  TEXT NOT NULL, -- JSON: [[lat,lng], [lat,lng], ...]
+  orden     INT NOT NULL DEFAULT 0,
+  visible   TINYINT(1) NOT NULL DEFAULT 1,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE pedidos (
-  id             INT AUTO_INCREMENT PRIMARY KEY,
-  cliente_nombre VARCHAR(150) DEFAULT NULL,
-  telefono       VARCHAR(30) DEFAULT NULL,
-  fecha_entrega  DATE DEFAULT NULL,
-  hora_entrega   VARCHAR(20) DEFAULT NULL,
-  tipo_entrega   VARCHAR(40) DEFAULT NULL,
-  direccion      VARCHAR(300) DEFAULT NULL,
-  dedicatoria    VARCHAR(300) DEFAULT NULL,
-  forma_pago     VARCHAR(100) DEFAULT NULL,
-  nota           VARCHAR(500) DEFAULT NULL,
-  ip             VARCHAR(45) DEFAULT NULL,
-  estado         ENUM('pendiente','coordinado','entregado') NOT NULL DEFAULT 'pendiente',
-  total          DECIMAL(10,2) NOT NULL,
-  creado_en      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  id                   INT AUTO_INCREMENT PRIMARY KEY,
+  cliente_nombre       VARCHAR(150) DEFAULT NULL,
+  telefono             VARCHAR(30) DEFAULT NULL,
+  fecha_entrega        DATE DEFAULT NULL,
+  hora_entrega         VARCHAR(20) DEFAULT NULL,
+  tipo_entrega         VARCHAR(40) DEFAULT NULL,
+  direccion            VARCHAR(300) DEFAULT NULL,
+  zona_delivery_id     INT DEFAULT NULL,
+  zona_delivery_nombre VARCHAR(100) DEFAULT NULL, -- copia del nombre al momento del pedido (sobrevive si se borra/renombra la zona)
+  costo_delivery       DECIMAL(10,2) NOT NULL DEFAULT 0,
+  dedicatoria          VARCHAR(300) DEFAULT NULL,
+  forma_pago           VARCHAR(100) DEFAULT NULL,
+  nota                 VARCHAR(500) DEFAULT NULL,
+  ip                   VARCHAR(45) DEFAULT NULL,
+  estado               ENUM('pendiente','coordinado','entregado') NOT NULL DEFAULT 'pendiente',
+  total                DECIMAL(10,2) NOT NULL,
+  creado_en            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (zona_delivery_id) REFERENCES zonas_delivery(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE pedido_items (

@@ -154,11 +154,20 @@ export function showToast(mensaje) {
 const FLOWER_ICON =
   '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="2.5"/><path d="M12 5.5C12 3.6 10.4 2 8.5 2c0 1.9 1.6 3.5 3.5 3.5Zm0 0C12 3.6 13.6 2 15.5 2c0 1.9-1.6 3.5-3.5 3.5Zm-2.5 2C7.6 7.5 6 5.9 6 4c1.9 0 3.5 1.6 3.5 3.5Zm5 0C14.5 5.6 16.1 4 18 4c0 1.9-1.6 3.5-3.5 3.5ZM12 10.5V22m0-6c-2.5 0-4.5-2-4.5-4.5M12 19c2.5 0 4.5-2 4.5-4.5"/></svg>';
 
+function renderTotales() {
+  const subtotalEl = document.getElementById('cart-subtotal');
+  const totalEl = document.getElementById('cart-total');
+  if (!subtotalEl || !totalEl) return;
+
+  const subtotal = cartTotal();
+  subtotalEl.textContent = formatPrice(subtotal);
+  totalEl.textContent = formatPrice(subtotal);
+}
+
 function renderCartPage() {
   const lista = document.getElementById('cart-items');
   const layout = document.getElementById('cart-layout');
   const vacio = document.getElementById('cart-empty');
-  const totalEl = document.getElementById('cart-total');
   const cart = getCart();
 
   if (cart.length === 0) {
@@ -206,7 +215,57 @@ function renderCartPage() {
     })
     .join('');
 
-  totalEl.textContent = formatPrice(cartTotal());
+  renderTotales();
+}
+
+/**
+ * Franja horaria de la tienda para una fecha (input type=date, "YYYY-MM-DD"):
+ * lunes a sábado 8:30 a.m.–6 p.m., domingo 10 a.m.–4 p.m. (sección 2 del
+ * CLAUDE.md raíz). Se arma con new Date(año, mes-1, día) en horario local
+ * (no new Date(fechaISO), que Date parsea como UTC y puede correr el día
+ * de la semana un día en zonas con offset negativo como Honduras).
+ */
+function franjaHorario(fechaISO) {
+  if (!fechaISO) return null;
+  const [anio, mes, dia] = fechaISO.split('-').map(Number);
+  if (!anio || !mes || !dia) return null;
+  const diaSemana = new Date(anio, mes - 1, dia).getDay(); // 0 = domingo
+  return diaSemana === 0
+    ? { inicio: 10 * 60, fin: 16 * 60 }
+    : { inicio: 8 * 60 + 30, fin: 18 * 60 };
+}
+
+function formatHora12(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  const periodo = h < 12 ? 'a.m.' : 'p.m.';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${periodo}`;
+}
+
+/** Llena el <select> de Hora con franjas de 30 min dentro del horario de la tienda según la fecha elegida. */
+function poblarHorasEntrega() {
+  const dateInput = document.getElementById('customer-delivery-date');
+  const timeSelect = document.getElementById('customer-delivery-time');
+  if (!dateInput || !timeSelect) return;
+
+  const franja = franjaHorario(dateInput.value);
+  if (!franja) {
+    timeSelect.innerHTML = '<option value="">Elige primero la fecha</option>';
+    timeSelect.disabled = true;
+    return;
+  }
+
+  const valorPrevio = timeSelect.value;
+  const opciones = [];
+  for (let min = franja.inicio; min <= franja.fin; min += 30) {
+    opciones.push(`${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`);
+  }
+
+  timeSelect.innerHTML =
+    '<option value="">Sin especificar</option>' +
+    opciones.map((h) => `<option value="${h}">${formatHora12(h)}</option>`).join('');
+  timeSelect.disabled = false;
+  if (opciones.includes(valorPrevio)) timeSelect.value = valorPrevio;
 }
 
 function initCartPage() {
@@ -215,6 +274,22 @@ function initCartPage() {
 
   renderCartPage();
   document.addEventListener('cart:updated', renderCartPage);
+
+  const deliveryTypeSelect = document.getElementById('customer-delivery-type');
+  deliveryTypeSelect?.addEventListener('change', (e) => {
+    if (e.target.value === 'Delivery a domicilio' && window.Swal) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Costo de delivery',
+        text: 'El costo del envío se coordina y confirma por WhatsApp según tu ubicación — el total de tu pedido podría cambiar.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#B8933E',
+      });
+    }
+  });
+
+  poblarHorasEntrega();
+  document.getElementById('customer-delivery-date')?.addEventListener('change', poblarHorasEntrega);
 
   page.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
@@ -262,6 +337,7 @@ function initCartPage() {
       showToast('Completa los campos obligatorios para enviar tu pedido');
       return false;
     }
+
     return true;
   }
 

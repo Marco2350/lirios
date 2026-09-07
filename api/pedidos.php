@@ -47,6 +47,21 @@ function limpiar(?string $texto, int $max): ?string
     return $texto === '' ? null : $texto;
 }
 
+/** Ray casting: ¿el punto [lat,lng] cae dentro del polígono [[lat,lng],...]? */
+function puntoEnPoligono(float $lat, float $lng, array $poligono): bool
+{
+    $dentro = false;
+    $n = count($poligono);
+    for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
+        [$latI, $lngI] = $poligono[$i];
+        [$latJ, $lngJ] = $poligono[$j];
+        $cruza = (($lngI > $lng) !== ($lngJ > $lng))
+            && ($lat < ($latJ - $latI) * ($lng - $lngI) / ($lngJ - $lngI) + $latI);
+        if ($cruza) $dentro = !$dentro;
+    }
+    return $dentro;
+}
+
 $crudo = file_get_contents('php://input');
 $datos = json_decode($crudo, true);
 
@@ -104,7 +119,37 @@ if (!$itemsValidados) {
     exit;
 }
 
-$total = round(array_sum(array_column($itemsValidados, 'subtotal')), 2);
+/* Costo de delivery: nunca se confía en el precio que pudiera mandar el
+   navegador. Se recibe el id de zona + la coordenada donde el cliente puso
+   el pin, se busca el precio real de esa zona en la base de datos, y se
+   verifica de nuevo aquí (point-in-polygon) que el punto realmente caiga
+   dentro de su polígono antes de cobrarlo. */
+$zonaDeliveryId = null;
+$zonaDeliveryNombre = null;
+$costoDelivery = 0.0;
+
+if ($tipoEntrega === 'Delivery a domicilio' && !empty($datos['zonaDeliveryId'])) {
+    $zid = (int) $datos['zonaDeliveryId'];
+    $lat = is_numeric($datos['lat'] ?? null) ? (float) $datos['lat'] : null;
+    $lng = is_numeric($datos['lng'] ?? null) ? (float) $datos['lng'] : null;
+
+    if ($zid > 0 && $lat !== null && $lng !== null) {
+        $stmt = db()->prepare('SELECT nombre, precio, poligono FROM zonas_delivery WHERE id = ? AND visible = 1');
+        $stmt->execute([$zid]);
+        $zona = $stmt->fetch();
+
+        if ($zona) {
+            $poligono = json_decode($zona['poligono'], true);
+            if (is_array($poligono) && count($poligono) >= 3 && puntoEnPoligono($lat, $lng, $poligono)) {
+                $zonaDeliveryId = $zid;
+                $zonaDeliveryNombre = $zona['nombre'];
+                $costoDelivery = round((float) $zona['precio'], 2);
+            }
+        }
+    }
+}
+
+$total = round(array_sum(array_column($itemsValidados, 'subtotal')) + $costoDelivery, 2);
 
 /* Límite de frecuencia: máx. 5 pedidos por IP cada 10 minutos, para que
    el endpoint público no se pueda inundar de pedidos falsos. */
@@ -125,8 +170,8 @@ try {
     db()->beginTransaction();
 
     $stmt = db()->prepare(
-        'INSERT INTO pedidos (cliente_nombre, telefono, fecha_entrega, hora_entrega, tipo_entrega, direccion, dedicatoria, forma_pago, nota, ip, total)
-         VALUES (:cliente, :telefono, :fecha_entrega, :hora_entrega, :tipo_entrega, :direccion, :dedicatoria, :forma_pago, :nota, :ip, :total)'
+        'INSERT INTO pedidos (cliente_nombre, telefono, fecha_entrega, hora_entrega, tipo_entrega, direccion, zona_delivery_id, zona_delivery_nombre, costo_delivery, dedicatoria, forma_pago, nota, ip, total)
+         VALUES (:cliente, :telefono, :fecha_entrega, :hora_entrega, :tipo_entrega, :direccion, :zona_id, :zona_nombre, :costo_delivery, :dedicatoria, :forma_pago, :nota, :ip, :total)'
     );
     $stmt->execute([
         'cliente' => $cliente,
@@ -135,6 +180,9 @@ try {
         'hora_entrega' => $horaEntrega,
         'tipo_entrega' => $tipoEntrega,
         'direccion' => $direccion,
+        'zona_id' => $zonaDeliveryId,
+        'zona_nombre' => $zonaDeliveryNombre,
+        'costo_delivery' => $costoDelivery,
         'dedicatoria' => $dedicatoria,
         'forma_pago' => $pago,
         'nota' => $nota,

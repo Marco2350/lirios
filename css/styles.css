@@ -1426,6 +1426,26 @@ p {
   color: var(--mostaza-dark);
 }
 
+.cart-subtotal-row {
+  border-top: none;
+  margin: 0 0 0.5rem;
+  padding-top: 0;
+  font-size: 0.92rem;
+  color: var(--gris-calido);
+}
+
+.amount-sm {
+  font-weight: 700;
+  color: var(--carbon);
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--gris-calido);
+  margin-top: 0.3rem;
+}
+
 .summary-note {
   font-size: 0.82rem;
   color: var(--gris-calido);
@@ -1441,6 +1461,16 @@ p {
 .cart-empty svg {
   color: var(--mostaza-light);
   margin-bottom: 1rem;
+}
+
+/* Alinea el look de SweetAlert2 (avisos del carrito) con la tipografía de marca */
+.swal2-popup {
+  font-family: var(--font-body);
+}
+
+.swal2-title {
+  font-family: var(--font-display);
+  color: var(--carbon);
 }
 
 /* ---------- Banda CTA - Lujosa y directa ---------- */

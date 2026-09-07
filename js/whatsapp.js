@@ -56,6 +56,11 @@ export function buildOrderMessage(cart, total, datosCliente = {}) {
     return `- ${cantidad}${item.nombre}${detalle} - ${formatPrice(item.precio)}${cu}${codigo}`;
   });
 
+  const lineaDelivery =
+    tipoEntrega === 'Delivery a domicilio'
+      ? ['*Costo de delivery:* Pendiente de confirmar por WhatsApp (no incluido en el total)']
+      : [];
+
   return [
     '*PEDIDO WEB - LIRIOS FLORISTERÍA*',
     '',
@@ -66,6 +71,7 @@ export function buildOrderMessage(cart, total, datosCliente = {}) {
     `*Teléfono:* ${telefono || '__'}`,
     `*Entrega:* ${fechaEntrega ? formatFecha(fechaEntrega) : '__'} / *Hora:* ${horaEntrega || '__'}`,
     `*Delivery o retiro:* ${tipoEntrega || '__'}`,
+    ...lineaDelivery,
     `*Dirección:* ${direccion || '__'}`,
     `*Dedicatoria:* ${dedicatoria || '__'}`,
     `*Pago:* ${pago || '__'}`,

@@ -16,6 +16,7 @@ function admin_icono(string $nombre): string
         'reportes' => '<path d="M3 20h18"/><path d="M5 20V10M12 20V4M19 20v-7"/>',
         'productos' => '<path d="M11 3h6a2 2 0 0 1 2 2v6l-9.5 9.5a1.5 1.5 0 0 1-2 0L3 16a1.5 1.5 0 0 1 0-2Z"/><circle cx="15.5" cy="7.5" r="1.25"/>',
         'categorias' => '<rect x="3.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3"/>',
+        'zonas' => '<path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/>',
         'imagenes' => '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 3.5 3.5L18 12l1.7 1.7"/>',
         'contrasena' => '<circle cx="8" cy="15" r="3.3"/><path d="M10.3 12.7 18 5"/><path d="M15 8l2 2"/><path d="M17.3 5.7 19 7.3"/>',
         'salir' => '<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/>',
@@ -40,6 +41,7 @@ function admin_header(string $titulo, string $activo = ''): void
         'reportes.php' => ['reportes', 'Reportes'],
         'productos.php' => ['productos', 'Productos'],
         'categorias.php' => ['categorias', 'Categorías'],
+        'zonas-delivery.php' => ['zonas', 'Zonas de delivery'],
         'subir-imagen.php' => ['imagenes', 'Imágenes'],
     ];
     ?>
@@ -54,7 +56,7 @@ function admin_header(string $titulo, string $activo = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800&family=Arimo:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css?v=14">
+  <link rel="stylesheet" href="../css/admin.css?v=16">
 </head>
 <body class="admin-shell">
 

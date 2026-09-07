@@ -81,6 +81,7 @@ admin_header('Pedidos', 'pedidos.php');
                   <br><small class="muted">📅 <?= $p['fecha_entrega'] ? e(date('d/m/Y', strtotime($p['fecha_entrega']))) : '__' ?> · <?= e($p['hora_entrega'] ?: '__') ?></small>
                 <?php endif; ?>
                 <?php if ($p['tipo_entrega']): ?><br><small class="muted">🚚 <?= e($p['tipo_entrega']) ?></small><?php endif; ?>
+                <?php if ($p['zona_delivery_nombre']): ?><br><small class="muted">🗺️ Zona: <?= e($p['zona_delivery_nombre']) ?> — L. <?= number_format((float) $p['costo_delivery'], 2) ?></small><?php endif; ?>
                 <?php if ($p['direccion']): ?><br><small class="muted">📍 <?= e($p['direccion']) ?></small><?php endif; ?>
                 <?php if ($p['dedicatoria']): ?><br><small class="muted">💌 <?= e($p['dedicatoria']) ?></small><?php endif; ?>
                 <?php if ($p['forma_pago']): ?><br><small class="muted">💳 <?= e($p['forma_pago']) ?></small><?php endif; ?>
