@@ -64,10 +64,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ->execute(['nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible, 'portada' => $rutaPortada, 'id' => $id]);
                 flash('ok', 'Categoría actualizada.');
             } else {
-                $slug = slug_unico('categorias', slugify($nombre));
-                db()->prepare('INSERT INTO categorias (slug, nombre, icono, orden, visible, imagen_portada) VALUES (:slug, :nombre, :icono, :orden, :visible, :portada)')
-                    ->execute(['slug' => $slug, 'nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible, 'portada' => $rutaPortada]);
-                flash('ok', 'Categoría agregada.');
+                db()->beginTransaction();
+                try {
+                    $slug = slug_unico('categorias', slugify($nombre));
+                    db()->prepare('INSERT INTO categorias (slug, nombre, icono, orden, visible, imagen_portada) VALUES (:slug, :nombre, :icono, :orden, :visible, :portada)')
+                        ->execute(['slug' => $slug, 'nombre' => $nombre, 'icono' => $icono, 'orden' => $orden, 'visible' => $visible, 'portada' => $rutaPortada]);
+                    $categoriaId = (int) db()->lastInsertId();
+
+                    /* Toda categoría necesita al menos una subcategoría para poder
+                       asignarle productos (productos.subcategoria_id es la FK real,
+                       no categoria_id) — sin esto, la categoría nueva no aparece en
+                       el <select> de "Agregar producto nuevo" de productos.php hasta
+                       que alguien cree una subcategoría a mano. Se crea "General"
+                       automáticamente, mismo criterio ya usado en el resto del
+                       catálogo (ver nota 2026-09-01 en el CLAUDE.md raíz, sección 6.1). */
+                    $slugSub = slug_unico('subcategorias', 'general');
+                    db()->prepare('INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES (:cat, :slug, :nombre, 0)')
+                        ->execute(['cat' => $categoriaId, 'slug' => $slugSub, 'nombre' => 'General']);
+
+                    db()->commit();
+                    flash('ok', 'Categoría agregada.');
+                } catch (Throwable $e) {
+                    db()->rollBack();
+                    error_log('[lirios] Error al crear categoría: ' . $e->getMessage());
+                    flash('error', 'No se pudo agregar la categoría. Intenta de nuevo; si el problema continúa, contacta a soporte técnico.');
+                }
             }
         }
         header('Location: categorias.php');

@@ -31,6 +31,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/mailer.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -219,6 +220,22 @@ try {
     }
 
     db()->commit();
+
+    notificar_pedido_por_correo($pedidoId, [
+        'cliente' => $cliente,
+        'telefono' => $telefono,
+        'fechaEntrega' => $fechaEntrega,
+        'horaEntrega' => $horaEntrega,
+        'tipoEntrega' => $tipoEntrega,
+        'direccion' => $direccion,
+        'dedicatoria' => $dedicatoria,
+        'pago' => $pago,
+        'nota' => $nota,
+        'items' => $itemsValidados,
+        'total' => $total,
+        'zonaDeliveryNombre' => $zonaDeliveryNombre,
+        'costoDelivery' => $costoDelivery,
+    ]);
 
     http_response_code(201);
     echo json_encode(['ok' => true, 'id' => $pedidoId]);
