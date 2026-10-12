@@ -56,7 +56,7 @@ function admin_header(string $titulo, string $activo = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800&family=Arimo:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css?v=16">
+  <link rel="stylesheet" href="../css/admin.css?v=19">
 </head>
 <body class="admin-shell">
 

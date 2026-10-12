@@ -639,38 +639,250 @@ form.inline {
 }
 
 .login-card {
+  position: relative;
+  overflow: hidden;
   background-color: var(--superficie);
   border: 1px solid var(--borde-sutil);
   border-radius: var(--radius-lg);
-  box-shadow: var(--sombra);
-  padding: 2.4rem;
-  width: min(380px, 100%);
-  text-align: center;
+  box-shadow: 0 18px 50px rgba(36, 31, 23, 0.1), var(--sombra-sutil);
+  width: min(880px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  text-align: left;
 }
 
-.login-card img {
+/* Panel de marca (izquierda) */
+.login-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2.6rem 2.4rem;
+  color: var(--crema);
+  min-height: 560px;
+  background:
+    linear-gradient(180deg, rgba(36, 31, 23, 0.72) 0%, rgba(36, 31, 23, 0.1) 32%, rgba(36, 31, 23, 0.55) 62%, rgba(36, 31, 23, 0.94) 100%),
+    url("../images/categorias/ramos-florales.webp") 52% center / cover no-repeat,
+    var(--carbon);
+}
+
+/* Filete dorado con la textura foil de marca */
+.login-brand::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 4px;
+  background: var(--gold-brushed), var(--gold-shine);
+}
+
+.login-brand img {
   height: 64px;
+  width: auto;
+  align-self: flex-start;
+}
+
+.login-brand-line {
+  display: block;
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--gold-shine);
   margin-bottom: 1.1rem;
 }
 
-.login-card h1 {
-  font-size: 1.3rem;
+.login-brand .login-brand-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--crema);
+  margin-bottom: 0.7rem;
 }
 
-.login-card p {
+.login-brand .login-brand-sub {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 28ch;
+}
+
+.login-brand .login-brand-title,
+.login-brand .login-brand-sub {
+  text-shadow: 0 1px 12px rgba(36, 31, 23, 0.45);
+}
+
+.login-brand-foot {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--mostaza-light);
+}
+
+/* Formulario (derecha) */
+.login-main {
+  padding: 3rem 2.8rem 2.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-card h1 {
+  font-size: 1.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.login-main .login-lead {
   color: var(--texto-secundario);
-  font-size: 0.88rem;
+  font-size: 0.92rem;
+}
+
+.login-back {
+  align-self: center;
+  margin-top: 1.4rem;
+  font-size: 0.82rem;
+  color: var(--texto-secundario);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.login-back:hover {
+  color: var(--mostaza-dark);
+}
+
+@media (max-width: 760px) {
+  .login-card {
+    grid-template-columns: 1fr;
+    width: min(440px, 100%);
+  }
+
+  .login-brand {
+    flex-direction: row;
+    align-items: center;
+    min-height: 130px;
+    padding: 1.2rem 1.4rem;
+    background:
+      linear-gradient(90deg, rgba(36, 31, 23, 0.85) 0%, rgba(36, 31, 23, 0.35) 100%),
+      url("../images/categorias/ramos-florales.webp") center / cover no-repeat,
+      var(--carbon);
+  }
+
+  .login-brand-text,
+  .login-brand-foot {
+    display: none;
+  }
+
+  .login-brand::after {
+    inset: auto 0 0 0;
+    width: auto;
+    height: 4px;
+  }
+
+  .login-main {
+    padding: 2rem 1.6rem 1.8rem;
+  }
 }
 
 .login-card form {
   text-align: left;
-  margin-top: 1.3rem;
+  margin-top: 1.6rem;
+}
+
+.login-card label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.45rem;
+}
+
+.login-card .flash {
+  margin-top: 1.1rem;
+  text-align: left;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 0 3rem 0 2.7rem;
+  background: var(--crema-suave);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  color: var(--texto);
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+
+.password-field input:focus {
+  outline: none;
+  background: var(--blanco);
+  border-color: var(--mostaza);
+  box-shadow: 0 0 0 3px rgba(184, 147, 62, 0.22);
+}
+
+.password-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--texto-secundario);
+  pointer-events: none;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--texto-secundario);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.password-toggle:hover,
+.password-toggle.activo {
+  color: var(--mostaza-dark);
+  background: rgba(184, 147, 62, 0.12);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--mostaza);
+  outline-offset: 1px;
+}
+
+.password-toggle .eye-closed {
+  display: none;
+}
+
+.password-toggle.activo .eye-open {
+  display: none;
+}
+
+.password-toggle.activo .eye-closed {
+  display: block;
 }
 
 .login-card .btn {
   width: 100%;
+  height: 48px;
   justify-content: center;
-  margin-top: 1.1rem;
+  margin-top: 1.3rem;
 }
 
 /* ---------- Dashboard ---------- */
