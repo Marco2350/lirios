@@ -120,6 +120,8 @@ CREATE TABLE pedidos (
   ip                   VARCHAR(45) DEFAULT NULL,
   estado               ENUM('pendiente','coordinado','entregado') NOT NULL DEFAULT 'pendiente',
   total                DECIMAL(10,2) NOT NULL,
+  origen               ENUM('web','manual') NOT NULL DEFAULT 'web',  -- 'manual' = registrado desde /admin/pedidos.php (2026-10-11)
+  descripcion          VARCHAR(500) DEFAULT NULL,         -- "Información" de pedidos manuales (sin pedido_items)
   creado_en            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (zona_delivery_id) REFERENCES zonas_delivery(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -312,3 +314,79 @@ CREATE TABLE admin_login_intentos (
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_ip_fecha (ip, creado_en)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- Control de caja (2026-10-12) — /admin/caja.php
+-- =========================================================
+
+CREATE TABLE caja_denominaciones (
+  id      INT AUTO_INCREMENT PRIMARY KEY,
+  valor   DECIMAL(10,2) NOT NULL,
+  tipo    ENUM('BILLETE','MONEDA') NOT NULL,
+  activa  TINYINT(1) NOT NULL DEFAULT 1,   -- desactivar en vez de borrar: el historial conserva su desglose
+  UNIQUE KEY uq_caja_denominacion (valor, tipo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE caja_sucursales (
+  id      INT AUTO_INCREMENT PRIMARY KEY,
+  nombre  VARCHAR(100) NOT NULL,
+  activa  TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_caja_sucursal_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE caja_cajas (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  sucursal_id  INT NOT NULL,
+  nombre       VARCHAR(100) NOT NULL,
+  activa       TINYINT(1) NOT NULL DEFAULT 1,   -- desactivar en vez de borrar: el historial conserva su caja
+  UNIQUE KEY uq_caja_nombre (sucursal_id, nombre),
+  FOREIGN KEY (sucursal_id) REFERENCES caja_sucursales(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE caja_diaria (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  caja_id         INT NOT NULL,                     -- qué caja (de qué sucursal) se abrió
+  fecha           DATE NOT NULL,
+  saldo_apertura  DECIMAL(10,2) NOT NULL DEFAULT 0,
+  saldo_cierre    DECIMAL(10,2) DEFAULT NULL,       -- conteo físico al cerrar
+  diferencia      DECIMAL(10,2) DEFAULT NULL,       -- saldo_cierre - saldo esperado (calculado por el servidor)
+  observacion     VARCHAR(500) DEFAULT NULL,        -- obligatoria si el cierre no cuadra
+  estado          ENUM('ABIERTA','CERRADA') NOT NULL DEFAULT 'ABIERTA',
+  abierta_en      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  cerrada_en      DATETIME DEFAULT NULL,
+  UNIQUE KEY uq_caja_dia (caja_id, fecha),          -- una apertura por caja y por día
+  FOREIGN KEY (caja_id) REFERENCES caja_cajas(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE caja_desglose (
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  caja_id          INT NOT NULL,
+  momento          ENUM('APERTURA','CIERRE') NOT NULL,
+  denominacion_id  INT DEFAULT NULL,
+  tipo             ENUM('BILLETE','MONEDA') NOT NULL,
+  valor            DECIMAL(10,2) NOT NULL,          -- copia del valor al momento (editar denominaciones no altera el historial)
+  cantidad         INT NOT NULL,
+  FOREIGN KEY (caja_id) REFERENCES caja_diaria(id) ON DELETE CASCADE,
+  FOREIGN KEY (denominacion_id) REFERENCES caja_denominaciones(id) ON DELETE SET NULL,
+  KEY idx_caja_desglose (caja_id, momento)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE caja_movimientos (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  caja_id    INT NOT NULL,
+  tipo       ENUM('ENTRADA','SALIDA') NOT NULL,
+  monto      DECIMAL(10,2) NOT NULL,
+  concepto   VARCHAR(255) NOT NULL,
+  creado_en  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (caja_id) REFERENCES caja_diaria(id) ON DELETE CASCADE,
+  KEY idx_caja_movimientos (caja_id, creado_en)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Semilla: denominaciones de Honduras (editables desde /admin/caja-denominaciones.php)
+INSERT INTO caja_denominaciones (valor, tipo) VALUES
+  (500,'BILLETE'),(100,'BILLETE'),(50,'BILLETE'),(20,'BILLETE'),(10,'BILLETE'),(5,'BILLETE'),
+  (2,'MONEDA'),(1,'MONEDA'),(0.50,'MONEDA'),(0.20,'MONEDA'),(0.10,'MONEDA'),(0.05,'MONEDA');
+
+-- Semilla: una sucursal y una caja para empezar (se administran en /admin/caja-cajas.php)
+INSERT INTO caja_sucursales (nombre) VALUES ('Tienda principal');
+INSERT INTO caja_cajas (sucursal_id, nombre) VALUES (1, 'Caja principal');
