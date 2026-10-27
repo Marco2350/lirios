@@ -3596,3 +3596,220 @@ form.inline {
   .cs-acciones { width: 100%; justify-content: flex-start; }
   .cs-cajas { grid-template-columns: 1fr; }
 }
+
+/* =========================================================
+   Pedidos: hoja del día (admin/pedidos.php?vista=dia)
+   Réplica de la hoja de cálculo de la clienta: una fila por pedido,
+   forma de pago como columnas, TOTAL DÍA al pie y total de la semana.
+   ========================================================= */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.dia-ir input[type="date"] {
+  height: 38px;
+  width: auto;
+  padding: 0 0.6rem;
+  font-size: 0.86rem;
+}
+
+.dia-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.dia-resumen > div {
+  flex: 1 1 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde-sutil);
+  border-radius: var(--radius-lg);
+}
+
+.dia-resumen span,
+.dia-semana-dia span,
+.dia-semana-total span {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-secundario);
+}
+
+.dia-resumen strong {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.dia-resumen .dia-resumen-total {
+  background: var(--exito-bg);
+  border-color: var(--exito-borde);
+}
+
+.dia-resumen .dia-resumen-total strong {
+  font-size: 1.5rem;
+  color: var(--exito-texto);
+}
+
+.dia-wrap {
+  overflow-x: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde-sutil);
+  border-radius: var(--radius-lg);
+}
+
+.dia-tabla {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.dia-tabla th,
+.dia-tabla td {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--borde-sutil);
+  vertical-align: middle;
+}
+
+.dia-tabla thead th {
+  background: var(--crema-suave);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-secundario);
+  text-align: left;
+}
+
+.dia-tabla .c-n { width: 2.4rem; text-align: center; color: var(--texto-secundario); }
+.dia-tabla .c-chk { width: 4.6rem; text-align: center; }
+.dia-tabla .c-monto { width: 6.5rem; text-align: right; font-variant-numeric: tabular-nums; }
+.dia-tabla thead .c-n, .dia-tabla thead .c-chk { text-align: center; }
+.dia-tabla thead .c-monto { text-align: right; }
+.dia-tabla .c-det { color: var(--texto-secundario); font-size: 0.82rem; }
+.dia-tabla .c-acc { width: 5.5rem; text-align: right; }
+
+.dia-tabla .c-info a { color: var(--texto); text-decoration: none; }
+.dia-tabla .c-info a:hover strong { text-decoration: underline; }
+
+.dia-prod {
+  display: block;
+  color: var(--texto-secundario);
+  font-size: 0.82rem;
+}
+
+.dia-canal {
+  display: inline-block;
+  margin-top: 0.15rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--crema-suave);
+  color: var(--texto-secundario);
+}
+
+.dia-canal.canal-whatsapp { background: rgba(91, 127, 163, 0.14); color: #3D6288; }
+.dia-canal.canal-tienda { background: rgba(184, 147, 62, 0.17); color: var(--mostaza-dark); }
+
+.dia-tabla tbody tr.dia-hecho td { background: rgba(234, 242, 233, 0.55); }
+
+.dia-check {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1.5px solid var(--borde-fuerte);
+  border-radius: 5px;
+  background: var(--superficie);
+  cursor: pointer;
+  position: relative;
+}
+
+.dia-check.on {
+  background: var(--exito-texto);
+  border-color: var(--exito-texto);
+}
+
+.dia-check.on::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.dia-marca { color: var(--exito-texto); font-weight: 700; }
+
+.dia-vacio {
+  padding: 2rem 1rem !important;
+  text-align: center;
+  color: var(--texto-secundario);
+}
+
+.dia-tabla tfoot th {
+  background: var(--exito-bg);
+  color: var(--exito-texto);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  border-bottom: 0;
+}
+
+.dia-tabla tfoot .c-info { text-align: left; letter-spacing: 0.04em; }
+.dia-tabla tfoot .c-total { text-align: right; font-size: 1.05rem; }
+
+.dia-semana { margin-top: 1.4rem; }
+
+.dia-semana h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+
+.dia-semana-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.dia-semana-dia,
+.dia-semana-total {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde-sutil);
+  border-radius: var(--radius-lg);
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.dia-semana-dia:hover { border-color: var(--mostaza); }
+.dia-semana-dia.on { border-color: var(--mostaza); box-shadow: 0 0 0 1px var(--mostaza); }
+.dia-semana-dia.hoy span { color: var(--mostaza-dark); }
+.dia-semana-dia small,
+.dia-semana-total small { color: var(--texto-secundario); font-size: 0.76rem; }
+.dia-semana-dia strong { font-family: var(--font-display); }
+
+.dia-semana-total {
+  background: var(--exito-bg);
+  border-color: var(--exito-borde);
+}
+
+.dia-semana-total strong {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--exito-texto);
+}

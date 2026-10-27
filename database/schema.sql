@@ -122,6 +122,8 @@ CREATE TABLE pedidos (
   total                DECIMAL(10,2) NOT NULL,
   origen               ENUM('web','manual') NOT NULL DEFAULT 'web',  -- 'manual' = registrado desde /admin/pedidos.php (2026-10-11)
   descripcion          VARCHAR(500) DEFAULT NULL,         -- "Información" de pedidos manuales (sin pedido_items)
+  canal                ENUM('web','tienda','whatsapp') NOT NULL DEFAULT 'web',  -- por dónde entró la venta (2026-10-26)
+  vendedor             VARCHAR(100) DEFAULT NULL,         -- empleado que atendió una venta manual
   creado_en            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (zona_delivery_id) REFERENCES zonas_delivery(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

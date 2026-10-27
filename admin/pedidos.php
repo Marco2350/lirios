@@ -24,7 +24,8 @@ const ESTADOS = ['pendiente' => 'Pendiente', 'coordinado' => 'Coordinado', 'entr
 const TIPOS_ENTREGA = ['Retiro en tienda', 'Delivery a domicilio'];
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const METODOS_PAGO = ['efectivo' => 'Efectivo', 'transferencia' => 'Transferencia', 'tarjeta' => 'Tarjeta'];
-const PARAMS_VOLVER = ['vista', 'estado', 'semana', 'entrega', 'pago', 'q', 'id', 'sinfecha'];
+const CANALES = ['web' => 'Web', 'tienda' => 'Tienda', 'whatsapp' => 'WhatsApp'];
+const PARAMS_VOLVER = ['vista', 'estado', 'semana', 'fecha', 'entrega', 'pago', 'q', 'id', 'sinfecha'];
 
 /** Lunes (Y-m-d) de la semana de $fecha; si no es una fecha válida, la de hoy. */
 function lunes_de(?string $fecha): string
@@ -124,11 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $metodo = $_POST['metodo_pago'] ?? '';
         $total = limpiar_precio($_POST['total'] ?? 0);
+        $canal = in_array($_POST['canal'] ?? '', ['tienda', 'whatsapp'], true) ? $_POST['canal'] : 'tienda';
 
         db()->prepare(
             'INSERT INTO pedidos (cliente_nombre, telefono, fecha_entrega, hora_entrega, tipo_entrega, estado, total,
-                                  forma_pago, origen, descripcion)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'manual\', ?)'
+                                  forma_pago, origen, descripcion, canal, vendedor, nota)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'manual\', ?, ?, ?, ?)'
         )->execute([
             limpiar_texto($_POST['cliente_nombre'] ?? '', 150) ?: null,
             limpiar_texto($_POST['telefono'] ?? '', 30) ?: null,
@@ -139,14 +141,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $total,
             isset(METODOS_PAGO[$metodo]) ? METODOS_PAGO[$metodo] : null,
             $descripcion,
+            $canal,
+            limpiar_texto($_POST['vendedor'] ?? '', 100) ?: null,
+            limpiar_texto($_POST['nota'] ?? '', 500) ?: null,
         ]);
         flash('ok', 'Pedido agregado.');
-        // Desde la agenda se vuelve a la semana del pedido nuevo; desde la lista, a la lista.
+        // Desde la agenda se vuelve a la semana del pedido nuevo; desde la lista, a la lista;
+        // desde la hoja del día, al día del pedido nuevo.
         if (($volver['vista'] ?? '') === 'lista') {
             header('Location: ' . $urlVolver);
+        } elseif (($volver['vista'] ?? 'dia') === 'dia') {
+            header('Location: ' . url_pedidos(['vista' => 'dia', 'fecha' => $fecha]));
         } else {
             header('Location: ' . url_pedidos(['vista' => 'agenda', 'semana' => lunes_de($fecha)]));
         }
+        exit;
+    }
+
+    if ($accion === 'marcar_realizado') {
+        // «Realizado» de la hoja del día = estado entregado; desmarcar lo regresa a coordinado.
+        db()->prepare(
+            "UPDATE pedidos SET estado = IF(estado = 'entregado', 'coordinado', 'entregado') WHERE id = ?"
+        )->execute([$id]);
+        header('Location: ' . $urlVolver);
         exit;
     }
 
@@ -154,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Solo los pedidos manuales se pueden borrar; los del carrito se conservan siempre.
         db()->prepare('DELETE FROM pedidos WHERE id = ? AND origen = \'manual\'')->execute([$id]);
         flash('ok', 'Pedido eliminado.');
-        header('Location: ' . url_pedidos(['vista' => $volver['vista'] ?? 'lista', 'estado' => $volver['estado'] ?? '', 'semana' => $volver['semana'] ?? '']));
+        header('Location: ' . url_pedidos(['vista' => $volver['vista'] ?? 'lista', 'estado' => $volver['estado'] ?? '', 'semana' => $volver['semana'] ?? '', 'fecha' => $volver['fecha'] ?? '']));
         exit;
     }
 
@@ -164,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 /* ---------- Filtros y datos ---------- */
 
-$vista = ($_GET['vista'] ?? 'agenda') === 'lista' ? 'lista' : 'agenda';
+$vista = in_array($_GET['vista'] ?? '', ['agenda', 'lista'], true) ? $_GET['vista'] : 'dia';
 $estadoFiltro = isset(ESTADOS[$_GET['estado'] ?? '']) ? $_GET['estado'] : '';
 $entregaFiltro = in_array($_GET['entrega'] ?? '', ['retiro', 'envio'], true) ? $_GET['entrega'] : '';
 $q = limpiar_texto($_GET['q'] ?? '', 80);
@@ -230,6 +247,44 @@ if ($vista === 'lista') {
     }
     $conteoEstados = db()->query('SELECT estado, COUNT(*) c FROM pedidos GROUP BY estado')->fetchAll(PDO::FETCH_KEY_PAIR);
     $itemsPorPedido = items_de_pedidos($pedidos);
+} elseif ($vista === 'dia') {
+    $hoy = date('Y-m-d');
+    $f = $_GET['fecha'] ?? '';
+    $diaSel = (preg_match('/^\d{4}-\d{2}-\d{2}$/', $f) && DateTime::createFromFormat('!Y-m-d', $f)) ? $f : $hoy;
+    $diaPrev = (new DateTime($diaSel))->modify('-1 day')->format('Y-m-d');
+    $diaSig = (new DateTime($diaSel))->modify('+1 day')->format('Y-m-d');
+    $lunes = lunes_de($diaSel);
+    $domingo = (new DateTime($lunes))->modify('+6 days')->format('Y-m-d');
+
+    // Hoja del día: todos los pedidos (web + manuales) con esa fecha de entrega, sin filtros,
+    // para que el total del día siempre sea el real.
+    $stmt = db()->prepare(
+        'SELECT * FROM pedidos WHERE fecha_entrega = :f ORDER BY hora_entrega IS NULL, hora_entrega, id'
+    );
+    $stmt->execute(['f' => $diaSel]);
+    $pedidosDia = $stmt->fetchAll();
+    $itemsPorPedido = items_de_pedidos($pedidosDia);
+
+    // Columnas de la hoja: lo que dice cada pedido en su forma de pago va en su columna.
+    $totDia = ['tarjeta' => 0.0, 'efectivo' => 0.0, 'transferencia' => 0.0, '' => 0.0];
+    foreach ($pedidosDia as $p) {
+        $totDia[metodo_pago($p['forma_pago'])] += (float) $p['total'];
+    }
+    $totalDia = array_sum($totDia);
+
+    // Semana (lunes a domingo) del día elegido: total por día.
+    $stmt = db()->prepare('SELECT fecha_entrega, total FROM pedidos WHERE fecha_entrega BETWEEN :d AND :h');
+    $stmt->execute(['d' => $lunes, 'h' => $domingo]);
+    $semanaDias = [];
+    for ($i = 0; $i < 7; $i++) {
+        $semanaDias[(new DateTime($lunes))->modify("+$i days")->format('Y-m-d')] = ['n' => 0, 'total' => 0.0];
+    }
+    foreach ($stmt->fetchAll() as $r) {
+        $semanaDias[$r['fecha_entrega']]['n']++;
+        $semanaDias[$r['fecha_entrega']]['total'] += (float) $r['total'];
+    }
+    $totalSemana = array_sum(array_column($semanaDias, 'total'));
+    $pedidosSemanaN = array_sum(array_column($semanaDias, 'n'));
 } else {
     $lunes = lunes_de($_GET['semana'] ?? null);
     $domingo = (new DateTime($lunes))->modify('+6 days')->format('Y-m-d');
@@ -286,6 +341,9 @@ function resumen_productos(array $p, array $itemsPorPedido): string
 
 /** Datos para volver a esta misma pantalla tras guardar (campo oculto "volver"). */
 $volverQs = http_build_query(array_intersect_key($_GET, array_flip(PARAMS_VOLVER)));
+if ($vista === 'dia') {
+    $volverQs = http_build_query(['vista' => 'dia', 'fecha' => $diaSel]);
+}
 
 /* ---------- Ayudas de presentación ---------- */
 
@@ -349,13 +407,16 @@ admin_header('Pedidos', 'pedidos.php');
 <form class="ped-toolbar" method="get" action="pedidos.php" role="search">
   <input type="hidden" name="vista" value="<?= e($vista) ?>">
   <?php if ($vista === 'agenda'): ?><input type="hidden" name="semana" value="<?= e($lunes) ?>"><?php endif; ?>
+  <?php if ($vista === 'dia'): ?><input type="hidden" name="fecha" value="<?= e($diaSel) ?>"><?php endif; ?>
   <?php if ($vista === 'lista' && $estadoFiltro): ?><input type="hidden" name="estado" value="<?= e($estadoFiltro) ?>"><?php endif; ?>
 
   <div class="seg" role="tablist" aria-label="Vista">
+    <a href="<?= e(url_pedidos(['vista' => 'dia'])) ?>" role="tab" aria-selected="<?= $vista === 'dia' ? 'true' : 'false' ?>">Día</a>
     <a href="<?= e(url_pedidos(['vista' => 'agenda'])) ?>" role="tab" aria-selected="<?= $vista === 'agenda' ? 'true' : 'false' ?>">Agenda</a>
     <a href="<?= e(url_pedidos(['vista' => 'lista'])) ?>" role="tab" aria-selected="<?= $vista === 'lista' ? 'true' : 'false' ?>">Lista</a>
   </div>
 
+  <?php if ($vista !== 'dia'): ?>
   <label class="ped-buscar">
     <?= ico('buscar') ?>
     <input type="search" name="q" value="<?= e($q) ?>" placeholder="Buscar por nombre o teléfono" aria-label="Buscar cliente">
@@ -377,6 +438,7 @@ admin_header('Pedidos', 'pedidos.php');
     <?php foreach (METODOS_PAGO as $k => $etq): ?><option value="<?= e($k) ?>" <?= $pagoFiltro === $k ? 'selected' : '' ?>><?= e($etq) ?></option><?php endforeach; ?>
     <option value="sin" <?= $pagoFiltro === 'sin' ? 'selected' : '' ?>>Sin definir</option>
   </select>
+  <?php endif; ?>
 
   <?php if (($estadoFiltro && $vista === 'agenda') || $entregaFiltro || $pagoFiltro || $q || $idFiltro || $soloSinFecha): ?>
     <a class="ped-limpiar" href="<?= e(url_pedidos($vista === 'agenda' ? ['vista' => 'agenda', 'semana' => $lunes] : ['vista' => 'lista', 'estado' => $estadoFiltro])) ?>">Quitar filtros</a>
@@ -385,7 +447,148 @@ admin_header('Pedidos', 'pedidos.php');
   <button type="button" class="btn ped-nuevo" data-abrir-modal="modal-pedido-manual"><?= ico('mas') ?> Pedido</button>
 </form>
 
-<?php if ($vista === 'agenda'): ?>
+<?php if ($vista === 'dia'): /* ============ Hoja del día ============ */ ?>
+
+<?php
+    $volverDia = http_build_query(['vista' => 'dia', 'fecha' => $diaSel]);
+    $etqDia = DIAS_LARGOS[(int) date('N', strtotime($diaSel)) - 1] . ' ' . (int) date('j', strtotime($diaSel)) . ' de '
+        . ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][(int) date('n', strtotime($diaSel)) - 1]
+        . ' de ' . date('Y', strtotime($diaSel));
+    $hayPagoSinDefinir = $totDia[''] > 0;
+    $monto = fn(float $v) => $v > 0 ? number_format($v, 2) : '';
+?>
+
+<div class="ag-cabecera">
+  <div class="ag-nav">
+    <a class="icon-btn" href="<?= e(url_pedidos(['vista' => 'dia', 'fecha' => $diaPrev])) ?>" aria-label="Día anterior"><?= ico('izq') ?></a>
+    <div class="ag-rango" aria-live="polite">
+      <strong><?= e($etqDia) ?></strong>
+      <small><?= $diaSel === $hoy ? 'Hoy' : '' ?></small>
+    </div>
+    <a class="icon-btn" href="<?= e(url_pedidos(['vista' => 'dia', 'fecha' => $diaSig])) ?>" aria-label="Día siguiente"><?= ico('der') ?></a>
+    <?php if ($diaSel !== $hoy): ?>
+      <a class="btn mini secundario" href="<?= e(url_pedidos(['vista' => 'dia'])) ?>">Hoy</a>
+    <?php endif; ?>
+    <form method="get" action="pedidos.php" class="dia-ir">
+      <input type="hidden" name="vista" value="dia">
+      <input type="date" name="fecha" value="<?= e($diaSel) ?>" onchange="this.form.submit()" aria-label="Ir a una fecha">
+    </form>
+  </div>
+</div>
+
+<section class="dia-resumen" aria-label="Total del día">
+  <div><span>Tarjeta</span><strong>L. <?= number_format($totDia['tarjeta'], 2) ?></strong></div>
+  <div><span>Efectivo</span><strong>L. <?= number_format($totDia['efectivo'], 2) ?></strong></div>
+  <div><span>Transferencia</span><strong>L. <?= number_format($totDia['transferencia'], 2) ?></strong></div>
+  <?php if ($hayPagoSinDefinir): ?><div><span>Sin definir</span><strong>L. <?= number_format($totDia[''], 2) ?></strong></div><?php endif; ?>
+  <div class="dia-resumen-total"><span>Total del día</span><strong>L. <?= number_format($totalDia, 2) ?></strong></div>
+</section>
+
+<div class="dia-wrap">
+  <table class="dia-tabla">
+    <thead>
+      <tr>
+        <th class="c-n">N°</th>
+        <th class="c-info">Información</th>
+        <th class="c-chk">Realizado</th>
+        <th class="c-chk">Recoge</th>
+        <th class="c-chk">Envío</th>
+        <th class="c-monto">Tarjeta</th>
+        <th class="c-monto">Efectivo</th>
+        <th class="c-monto">Transferencia</th>
+        <?php if ($hayPagoSinDefinir): ?><th class="c-monto">Sin definir</th><?php endif; ?>
+        <th class="c-det">Detalles</th>
+        <th class="c-acc"><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php if (!$pedidosDia): ?>
+        <tr><td colspan="<?= $hayPagoSinDefinir ? 11 : 10 ?>" class="dia-vacio">No hay pedidos para este día. Usa «+ Pedido» para anotar una venta en tienda o por WhatsApp.</td></tr>
+      <?php endif; ?>
+      <?php foreach ($pedidosDia as $i => $p):
+          $mp = metodo_pago($p['forma_pago']);
+          $hecho = $p['estado'] === 'entregado';
+          $detalles = array_filter([
+              $p['hora_entrega'] ? 'Hora: ' . $p['hora_entrega'] : '',
+              $p['nota'],
+              $p['direccion'] && es_envio($p['tipo_entrega']) ? $p['direccion'] : '',
+              $p['dedicatoria'] ? 'Dedicatoria: ' . $p['dedicatoria'] : '',
+          ]);
+          ?>
+        <tr class="<?= $hecho ? 'dia-hecho' : '' ?>">
+          <td class="c-n"><?= $i + 1 ?></td>
+          <td class="c-info">
+            <a href="<?= e(url_pedidos(['vista' => 'lista', 'id' => $p['id']])) ?>"><strong><?= e($p['cliente_nombre'] ?: 'Sin nombre') ?></strong></a>
+            <span class="dia-prod"><?= e(resumen_productos($p, $itemsPorPedido)) ?></span>
+            <span class="dia-canal canal-<?= e($p['canal'] ?? 'web') ?>"><?= e(CANALES[$p['canal'] ?? 'web'] ?? 'Web') ?><?= !empty($p['vendedor']) ? ' · ' . e($p['vendedor']) : '' ?></span>
+          </td>
+          <td class="c-chk">
+            <form method="post" action="pedidos.php">
+              <?= csrf_field() ?>
+              <input type="hidden" name="accion" value="marcar_realizado">
+              <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
+              <input type="hidden" name="volver" value="<?= e($volverDia) ?>">
+              <button type="submit" class="dia-check <?= $hecho ? 'on' : '' ?>" aria-pressed="<?= $hecho ? 'true' : 'false' ?>"
+                      title="<?= $hecho ? 'Marcado como realizado (clic para desmarcar)' : 'Marcar como realizado' ?>"><span class="sr-only">Realizado</span></button>
+            </form>
+          </td>
+          <td class="c-chk"><?= es_retiro($p['tipo_entrega']) ? '<span class="dia-marca" title="Recoge en tienda">✓</span>' : '' ?></td>
+          <td class="c-chk"><?= es_envio($p['tipo_entrega']) ? '<span class="dia-marca" title="Envío">✓</span>' : '' ?></td>
+          <td class="c-monto"><?= $mp === 'tarjeta' ? $monto((float) $p['total']) : '' ?></td>
+          <td class="c-monto"><?= $mp === 'efectivo' ? $monto((float) $p['total']) : '' ?></td>
+          <td class="c-monto"><?= $mp === 'transferencia' ? $monto((float) $p['total']) : '' ?></td>
+          <?php if ($hayPagoSinDefinir): ?><td class="c-monto"><?= $mp === '' ? $monto((float) $p['total']) : '' ?></td><?php endif; ?>
+          <td class="c-det"><?= e(implode(' · ', $detalles)) ?></td>
+          <td class="c-acc">
+            <?php if ($p['origen'] === 'manual'): ?>
+              <button type="button" class="btn mini peligro" data-confirmar-eliminar="dia-del-<?= (int) $p['id'] ?>"
+                      data-confirmar-mensaje="¿Eliminar este pedido manual? Esta acción no se puede deshacer.">Eliminar</button>
+              <form id="dia-del-<?= (int) $p['id'] ?>" method="post" action="pedidos.php">
+                <?= csrf_field() ?>
+                <input type="hidden" name="accion" value="eliminar_manual">
+                <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
+                <input type="hidden" name="volver" value="<?= e($volverDia) ?>">
+              </form>
+            <?php endif; ?>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+    <tfoot>
+      <tr>
+        <th class="c-n"></th>
+        <th class="c-info">TOTAL DÍA</th>
+        <th class="c-chk"></th><th class="c-chk"></th><th class="c-chk"></th>
+        <th class="c-monto"><?= number_format($totDia['tarjeta'], 2) ?></th>
+        <th class="c-monto"><?= number_format($totDia['efectivo'], 2) ?></th>
+        <th class="c-monto"><?= number_format($totDia['transferencia'], 2) ?></th>
+        <?php if ($hayPagoSinDefinir): ?><th class="c-monto"><?= number_format($totDia[''], 2) ?></th><?php endif; ?>
+        <th class="c-det c-total">L. <?= number_format($totalDia, 2) ?></th>
+        <th class="c-acc"></th>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<section class="dia-semana" aria-label="Total de la semana">
+  <h3>Semana del <?= (int) date('j', strtotime($lunes)) ?> al <?= (int) date('j', strtotime($domingo)) . ' de ' . MESES_CORTOS[(int) date('n', strtotime($domingo)) - 1] ?></h3>
+  <div class="dia-semana-grid">
+    <?php foreach ($semanaDias as $f => $d): $i = (int) date('N', strtotime($f)) - 1; ?>
+      <a class="dia-semana-dia <?= $f === $diaSel ? 'on' : '' ?> <?= $f === $hoy ? 'hoy' : '' ?>" href="<?= e(url_pedidos(['vista' => 'dia', 'fecha' => $f])) ?>">
+        <span><?= e(DIAS_CORTOS[$i]) ?> <?= (int) date('j', strtotime($f)) ?></span>
+        <strong>L. <?= number_format($d['total'], 2) ?></strong>
+        <small><?= $d['n'] ?> <?= $d['n'] === 1 ? 'pedido' : 'pedidos' ?></small>
+      </a>
+    <?php endforeach; ?>
+    <div class="dia-semana-total">
+      <span>Total de la semana</span>
+      <strong>L. <?= number_format($totalSemana, 2) ?></strong>
+      <small><?= (int) $pedidosSemanaN ?> <?= $pedidosSemanaN === 1 ? 'pedido' : 'pedidos' ?></small>
+    </div>
+  </div>
+</section>
+
+<?php elseif ($vista === 'agenda'): ?>
 
 <?php
     $nombreMes = fn(string $ymd) => MESES_CORTOS[(int) date('n', strtotime($ymd)) - 1];
@@ -692,7 +895,7 @@ admin_header('Pedidos', 'pedidos.php');
     <input type="hidden" name="accion" value="agregar_manual">
     <input type="hidden" name="volver" value="<?= e($volverQs) ?>">
     <h3>Agregar pedido manual</h3>
-    <p class="modal-ayuda">Para ventas de mostrador, llamadas o mensajes que no pasaron por el carrito.</p>
+    <p class="modal-ayuda">Para ventas en tienda o por WhatsApp que no pasaron por el carrito.</p>
     <div class="form-grid">
       <div class="full">
         <label for="pm-desc">¿Qué se pidió? *</label>
@@ -700,7 +903,7 @@ admin_header('Pedidos', 'pedidos.php');
       </div>
       <div>
         <label for="pm-fecha">Fecha de entrega *</label>
-        <input type="date" id="pm-fecha" name="fecha_entrega" required value="<?= e(date('Y-m-d')) ?>">
+        <input type="date" id="pm-fecha" name="fecha_entrega" required value="<?= e($vista === 'dia' ? $diaSel : date('Y-m-d')) ?>">
       </div>
       <div>
         <label for="pm-hora">Hora</label>
@@ -728,9 +931,24 @@ admin_header('Pedidos', 'pedidos.php');
           <?php foreach (METODOS_PAGO as $k => $etq): ?><option value="<?= e($k) ?>"><?= e($etq) ?></option><?php endforeach; ?>
         </select>
       </div>
-      <div class="full">
+      <div>
+        <label for="pm-canal">¿Por dónde se vendió?</label>
+        <select id="pm-canal" name="canal">
+          <option value="tienda">Tienda (en físico)</option>
+          <option value="whatsapp">WhatsApp</option>
+        </select>
+      </div>
+      <div>
+        <label for="pm-vendedor">Vendido por</label>
+        <input type="text" id="pm-vendedor" name="vendedor" maxlength="100" placeholder="Nombre del empleado">
+      </div>
+      <div>
         <label for="pm-total">Total del pedido (L.)</label>
         <input type="number" id="pm-total" name="total" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div class="full">
+        <label for="pm-nota">Detalles</label>
+        <input type="text" id="pm-nota" name="nota" maxlength="500" placeholder="Ej. Paga el resto al recoger, entrega en Megapaca">
       </div>
     </div>
     <div class="modal-portada-acciones">
