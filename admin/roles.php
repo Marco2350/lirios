@@ -28,9 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             db()->prepare('INSERT INTO admin_roles (nombre, descripcion) VALUES (?, ?)')
                 ->execute([$nombre, limpiar_texto($_POST['descripcion'] ?? '', 200) ?: null]);
+            $id = (int) db()->lastInsertId();
             flash('ok', "Rol «{$nombre}» creado. Marca ahora sus permisos y guarda.");
         }
-        header('Location: roles.php');
+        header('Location: roles.php' . ($id ? '?rol=' . $id : ''));
         exit;
     }
 
@@ -75,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-        header('Location: roles.php');
+        header('Location: roles.php?rol=' . $id);
         exit;
     }
 
@@ -113,6 +114,18 @@ foreach (db()->query('SELECT * FROM admin_rol_permisos')->fetchAll() as $p) {
     $permisosPorRol[$p['rol_id']][$p['modulo']] = $p;
 }
 
+$ICONO_ACCION = ['ver' => 'ver', 'crear' => 'mas', 'editar' => 'editar', 'eliminar' => 'eliminar'];
+$ICONO_MODULO = [
+    'pedidos' => 'pedidos', 'codigos' => 'codigos', 'caja' => 'caja', 'reportes' => 'reportes', 'productos' => 'productos',
+    'categorias' => 'categorias', 'zonas' => 'zonas', 'imagenes' => 'imagenes', 'usuarios' => 'usuarios',
+];
+$TOTAL_PERMISOS = count(MODULOS) * count(ACCIONES_PERMISO);
+$rolSel = (int) ($_GET['rol'] ?? 0);
+if (!in_array($rolSel, array_map('intval', array_column($roles, 'id')), true)) {
+    $rolSel = (int) $roles[0]['id'];
+}
+$puedeEditar = puede('usuarios', 'editar');
+
 admin_header('Usuarios y roles', 'usuarios.php');
 ?>
 
@@ -121,104 +134,194 @@ admin_header('Usuarios y roles', 'usuarios.php');
   <a href="roles.php" class="on">Roles y permisos</a>
 </nav>
 
-<p class="intro">Cada rol define qué módulos ve y qué puede hacer en ellos. «Eliminar» se marca aparte, así puedes dejar que alguien edite sin poder borrar. Los cambios aplican de inmediato.</p>
+<div class="ur-roles">
 
-<?php foreach ($roles as $r): $esD = (int) $r['es_dueno'] === 1; $fid = 'rol-' . (int) $r['id']; ?>
-  <div class="panel">
-    <form id="<?= e($fid) ?>" method="post" action="roles.php">
-      <?= csrf_field() ?>
-      <input type="hidden" name="accion" value="guardar_rol">
-      <input type="hidden" name="id" value="<?= (int) $r['id'] ?>">
-      <div class="panel-header">
-        <h2><?= e($r['nombre']) ?> <small class="muted">· <?= (int) $r['usuarios'] ?> <?= (int) $r['usuarios'] === 1 ? 'usuario' : 'usuarios' ?></small></h2>
-      </div>
-
-      <?php if ($esD): ?>
-        <p class="intro">Acceso total a todos los módulos, incluido eliminar y administrar usuarios. Este rol no se puede restringir.</p>
-      <?php else: ?>
-        <div class="form-grid">
-          <div>
-            <label for="<?= e($fid) ?>-n">Nombre del rol</label>
-            <input type="text" id="<?= e($fid) ?>-n" name="nombre" value="<?= e($r['nombre']) ?>" maxlength="80" required>
-          </div>
-          <div>
-            <label for="<?= e($fid) ?>-d">Descripción</label>
-            <input type="text" id="<?= e($fid) ?>-d" name="descripcion" value="<?= e($r['descripcion']) ?>" maxlength="200">
-          </div>
-        </div>
-        <div class="tabla-scroll">
-          <table class="tabla">
-            <thead>
-              <tr><th>Módulo</th><?php foreach (ACCIONES_PERMISO as $etq): ?><th style="text-align:center"><?= e($etq) ?></th><?php endforeach; ?></tr>
-            </thead>
-            <tbody>
-              <?php foreach (MODULOS as $modulo => $etqMod): $perm = $permisosPorRol[$r['id']][$modulo] ?? []; ?>
-                <tr>
-                  <td><?= e($etqMod) ?></td>
-                  <?php foreach (array_keys(ACCIONES_PERMISO) as $a): ?>
-                    <td style="text-align:center">
-                      <input type="checkbox" name="perm[<?= e($modulo) ?>][<?= e($a) ?>]" value="1" data-perm-accion="<?= e($a) ?>"
-                             aria-label="<?= e(ACCIONES_PERMISO[$a] . ' ' . $etqMod) ?>" <?= !empty($perm['puede_' . $a]) ? 'checked' : '' ?>>
-                    </td>
-                  <?php endforeach; ?>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;gap:.5rem;margin-top:1rem">
-          <?php if (puede('usuarios', 'editar')): ?><button type="submit" class="btn">Guardar rol</button><?php endif; ?>
-          <?php if (puede('usuarios', 'eliminar')): ?>
-            <button type="button" class="btn peligro" data-confirmar-eliminar="<?= e($fid) ?>-del"
-                    data-confirmar-mensaje="¿Eliminar el rol «<?= e($r['nombre']) ?>»? Solo se puede si ya no tiene usuarios.">Eliminar rol</button>
-          <?php endif; ?>
-        </div>
-      <?php endif; ?>
-    </form>
-    <?php if (!$esD): ?>
-      <form id="<?= e($fid) ?>-del" method="post" action="roles.php">
-        <?= csrf_field() ?>
-        <input type="hidden" name="accion" value="eliminar_rol">
-        <input type="hidden" name="id" value="<?= (int) $r['id'] ?>">
-      </form>
+  <aside class="ur-roles-lista" role="tablist" aria-label="Roles">
+    <h2>Roles del panel</h2>
+    <?php foreach ($roles as $r):
+        $esD = (int) $r['es_dueno'] === 1;
+        $cuenta = 0;
+        foreach ($permisosPorRol[$r['id']] ?? [] as $pp) {
+            $cuenta += (int) $pp['puede_ver'] + (int) $pp['puede_crear'] + (int) $pp['puede_editar'] + (int) $pp['puede_eliminar'];
+        }
+        ?>
+      <button type="button" class="ur-rol-item" role="tab" data-rol="<?= (int) $r['id'] ?>" aria-selected="<?= (int) $r['id'] === $rolSel ? 'true' : 'false' ?>">
+        <span class="ur-ico ur-tono-<?= $esD ? 'dueno' : (int) $r['id'] % 5 ?>"><?= admin_icono($esD ? 'corona' : 'escudo') ?></span>
+        <span class="txt">
+          <strong><?= e($r['nombre']) ?></strong>
+          <small><?= (int) $r['usuarios'] ?> <?= (int) $r['usuarios'] === 1 ? 'usuario' : 'usuarios' ?></small>
+        </span>
+        <span class="ur-rol-cuenta" data-cuenta-rol="<?= (int) $r['id'] ?>" title="Permisos concedidos"><?= $esD ? 'Todo' : $cuenta . '/' . $TOTAL_PERMISOS ?></span>
+      </button>
+    <?php endforeach; ?>
+    <?php if (puede('usuarios', 'crear')): ?>
+      <button type="button" class="btn mini secundario ur-rol-nuevo" data-abrir-modal="modal-rol-nuevo"><?= admin_icono('mas') ?> Nuevo rol</button>
     <?php endif; ?>
+  </aside>
+
+  <div>
+    <?php foreach ($roles as $r):
+        $esD = (int) $r['es_dueno'] === 1;
+        $fid = 'rol-' . (int) $r['id'];
+        $iM = 0;
+        ?>
+      <section class="ur-panel" data-panel="<?= (int) $r['id'] ?>" <?= (int) $r['id'] === $rolSel ? '' : 'hidden' ?>>
+        <form id="<?= e($fid) ?>" method="post" action="roles.php">
+          <?= csrf_field() ?>
+          <input type="hidden" name="accion" value="guardar_rol">
+          <input type="hidden" name="id" value="<?= (int) $r['id'] ?>">
+
+          <div class="ur-panel-cab">
+            <span class="ur-ico ur-tono-<?= $esD ? 'dueno' : (int) $r['id'] % 5 ?>"><?= admin_icono($esD ? 'corona' : 'escudo') ?></span>
+            <div>
+              <h2><?= e($r['nombre']) ?></h2>
+              <p><?= e($r['descripcion'] ?: ($esD ? 'Acceso total al panel.' : 'Sin descripción')) ?> · <?= (int) $r['usuarios'] ?> <?= (int) $r['usuarios'] === 1 ? 'usuario' : 'usuarios' ?></p>
+            </div>
+            <?php if (!$esD): ?>
+              <div class="ur-panel-acciones">
+                <span class="ur-sucio">Cambios sin guardar</span>
+                <?php if (puede('usuarios', 'eliminar')): ?>
+                  <button type="button" class="btn mini peligro" data-confirmar-eliminar="<?= e($fid) ?>-del"
+                          data-confirmar-mensaje="¿Eliminar el rol «<?= e($r['nombre']) ?>»? Solo se puede si ya no tiene usuarios.">Eliminar rol</button>
+                <?php endif; ?>
+                <?php if ($puedeEditar): ?><button type="submit" class="btn"><?= admin_icono('check') ?> Guardar cambios</button><?php endif; ?>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <?php if ($esD): ?>
+            <div class="ur-aviso-dueno">
+              <?= admin_icono('corona') ?>
+              <div><strong>Acceso total.</strong> Este rol puede ver, crear, editar y eliminar en todos los módulos, y administrar usuarios y roles. No se puede restringir.</div>
+            </div>
+          <?php else: ?>
+            <div class="ur-datos-rol">
+              <div>
+                <label for="<?= e($fid) ?>-n">Nombre del rol</label>
+                <input type="text" id="<?= e($fid) ?>-n" name="nombre" value="<?= e($r['nombre']) ?>" maxlength="80" required <?= $puedeEditar ? '' : 'readonly' ?>>
+              </div>
+              <div>
+                <label for="<?= e($fid) ?>-d">Descripción</label>
+                <input type="text" id="<?= e($fid) ?>-d" name="descripcion" value="<?= e($r['descripcion']) ?>" maxlength="200" <?= $puedeEditar ? '' : 'readonly' ?>>
+              </div>
+            </div>
+          <?php endif; ?>
+
+          <div class="ur-modulos" style="<?= $esD ? 'margin-top:1rem' : '' ?>">
+            <?php foreach (MODULOS as $modulo => $etqMod):
+                $perm = $permisosPorRol[$r['id']][$modulo] ?? [];
+                $marcados = 0;
+                foreach (array_keys(ACCIONES_PERMISO) as $a) {
+                    $marcados += ($esD || !empty($perm['puede_' . $a])) ? 1 : 0;
+                }
+                $bloqueado = $esD || !$puedeEditar;
+                ?>
+              <div class="ur-modulo <?= $marcados ? 'on' : '' ?>" data-modulo>
+                <div class="ur-modulo-cab">
+                  <span class="ur-ico ur-tono-<?= $iM++ % 5 ?>"><?= admin_icono($ICONO_MODULO[$modulo] ?? 'escudo') ?></span>
+                  <strong><?= e($etqMod) ?><small><span data-cuenta><?= $marcados ?></span>/<?= count(ACCIONES_PERMISO) ?> permisos</small></strong>
+                  <label class="ur-switch" title="Marcar o quitar todos">
+                    <input type="checkbox" data-master aria-label="Todos los permisos de <?= e($etqMod) ?>" <?= $marcados === count(ACCIONES_PERMISO) ? 'checked' : '' ?> <?= $bloqueado ? 'disabled' : '' ?>><span></span>
+                  </label>
+                </div>
+                <div class="ur-modulo-cuerpo">
+                  <?php foreach (ACCIONES_PERMISO as $a => $etqA): ?>
+                    <label class="ur-permiso <?= $a === 'eliminar' ? 'eliminar' : '' ?>">
+                      <span class="lbl"><?= admin_icono($ICONO_ACCION[$a]) ?><?= e($etqA) ?></span>
+                      <span class="ur-switch">
+                        <input type="checkbox" data-perm="<?= e($a) ?>" <?= $bloqueado ? '' : 'name="perm[' . e($modulo) . '][' . e($a) . ']" value="1"' ?>
+                               <?= ($esD || !empty($perm['puede_' . $a])) ? 'checked' : '' ?> <?= $bloqueado ? 'disabled' : '' ?>><span></span>
+                      </span>
+                    </label>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </form>
+        <?php if (!$esD): ?>
+          <form id="<?= e($fid) ?>-del" method="post" action="roles.php">
+            <?= csrf_field() ?>
+            <input type="hidden" name="accion" value="eliminar_rol">
+            <input type="hidden" name="id" value="<?= (int) $r['id'] ?>">
+          </form>
+        <?php endif; ?>
+      </section>
+    <?php endforeach; ?>
   </div>
-<?php endforeach; ?>
+</div>
 
 <?php if (puede('usuarios', 'crear')): ?>
-<div class="panel">
-  <h2>Nuevo rol</h2>
-  <form method="post" action="roles.php">
+<dialog class="modal-portada" id="modal-rol-nuevo" style="width:min(460px,92vw)">
+  <form method="post" action="roles.php" data-enter-siguiente>
     <?= csrf_field() ?>
     <input type="hidden" name="accion" value="crear_rol">
-    <div class="form-grid">
-      <div>
-        <label for="nr-nombre">Nombre del rol *</label>
-        <input type="text" id="nr-nombre" name="nombre" required maxlength="80" placeholder="Ej. Caja">
-      </div>
-      <div>
-        <label for="nr-desc">Descripción</label>
-        <input type="text" id="nr-desc" name="descripcion" maxlength="200">
-      </div>
+    <h3>Nuevo rol</h3>
+    <p class="modal-ayuda">Se crea sin permisos. Después marca en la lista qué módulos puede ver y qué puede hacer.</p>
+    <label for="nr-nombre">Nombre del rol *</label>
+    <input type="text" id="nr-nombre" name="nombre" required maxlength="80" placeholder="Ej. Caja">
+    <label for="nr-desc">Descripción</label>
+    <input type="text" id="nr-desc" name="descripcion" maxlength="200" placeholder="Qué hace este rol">
+    <div class="modal-portada-acciones">
+      <button type="button" class="btn mini secundario" data-cerrar-modal>Cancelar</button>
+      <button type="submit" class="btn mini">Crear rol</button>
     </div>
-    <button type="submit" class="btn">Crear rol</button>
   </form>
-</div>
+</dialog>
 <?php endif; ?>
 
 <script>
-// Marcar «Crear», «Editar» o «Eliminar» marca «Ver»; desmarcar «Ver» desmarca el resto de esa fila.
-document.querySelectorAll('input[data-perm-accion]').forEach(function (cb) {
-  cb.addEventListener('change', function () {
-    var fila = cb.closest('tr');
-    var ver = fila.querySelector('[data-perm-accion="ver"]');
-    if (cb.dataset.permAccion === 'ver' && !cb.checked) {
-      fila.querySelectorAll('input').forEach(function (o) { o.checked = false; });
-    } else if (cb.checked) {
-      ver.checked = true;
-    }
+(function () {
+  var TOTAL = <?= (int) $TOTAL_PERMISOS ?>;
+  var items = document.querySelectorAll('.ur-rol-item');
+  var paneles = document.querySelectorAll('.ur-panel');
+  var sinGuardar = false;
+
+  // ---- Elegir rol (sin recargar) ----
+  function elegir(id) {
+    items.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.rol === id ? 'true' : 'false'); });
+    paneles.forEach(function (p) { p.hidden = p.dataset.panel !== id; });
+    try { history.replaceState(null, '', 'roles.php?rol=' + id); } catch (e) { /* sin historial: no pasa nada */ }
+  }
+  items.forEach(function (b) { b.addEventListener('click', function () { elegir(b.dataset.rol); }); });
+
+  // ---- Interruptores: «Ver» es la base; el interruptor general marca/quita todo el módulo ----
+  function refrescarModulo(mod) {
+    var permisos = mod.querySelectorAll('[data-perm]');
+    var n = 0;
+    permisos.forEach(function (c) { if (c.checked) n++; });
+    mod.querySelector('[data-cuenta]').textContent = n;
+    mod.querySelector('[data-master]').checked = n === permisos.length;
+    mod.classList.toggle('on', n > 0);
+  }
+  function refrescarRol(panel) {
+    var total = panel.querySelectorAll('[data-perm]:checked').length;
+    var badge = document.querySelector('[data-cuenta-rol="' + panel.dataset.panel + '"]');
+    if (badge && panel.querySelector('[data-master]:not([disabled])')) badge.textContent = total + '/' + TOTAL;
+  }
+  paneles.forEach(function (panel) {
+    panel.addEventListener('change', function (e) {
+      var c = e.target, mod = c.closest('[data-modulo]');
+      if (!mod || c.disabled) return;
+      if (c.hasAttribute('data-master')) {
+        mod.querySelectorAll('[data-perm]').forEach(function (p) { p.checked = c.checked; });
+      } else if (c.dataset.perm === 'ver' && !c.checked) {
+        mod.querySelectorAll('[data-perm]').forEach(function (p) { p.checked = false; });
+      } else if (c.checked) {
+        mod.querySelector('[data-perm="ver"]').checked = true;
+      }
+      refrescarModulo(mod);
+      refrescarRol(panel);
+      panel.classList.add('sucio');
+      sinGuardar = true;
+    });
+    panel.addEventListener('input', function (e) {
+      if (e.target.matches('.ur-datos-rol input')) { panel.classList.add('sucio'); sinGuardar = true; }
+    });
+    panel.querySelector('form').addEventListener('submit', function () { sinGuardar = false; });
   });
-});
+  window.addEventListener('beforeunload', function (e) { if (sinGuardar) { e.preventDefault(); e.returnValue = ''; } });
+})();
 </script>
 
 <?php admin_footer(); ?>

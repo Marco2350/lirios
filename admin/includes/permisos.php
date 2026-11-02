@@ -154,3 +154,14 @@ function exigir_permiso_pagina(string $modulo): void
     }
     exigir_permiso($modulo, $necesaria);
 }
+
+/** Iniciales para el avatar ("Sarahí Reyes" -> "SR"). */
+function iniciales(string $nombre): string
+{
+    $partes = preg_split('/\s+/u', trim($nombre), -1, PREG_SPLIT_NO_EMPTY);
+    $ini = '';
+    foreach (array_slice($partes, 0, 2) as $p) {
+        $ini .= mb_strtoupper(mb_substr($p, 0, 1, 'UTF-8'), 'UTF-8');
+    }
+    return $ini ?: '?';
+}
