@@ -135,6 +135,62 @@ function resumen_items(array $items): string
     return mb_substr(implode(', ', $partes), 0, 500, 'UTF-8');
 }
 
+/**
+ * Minutos desde las 00:00 de la hora de entrega, o null si no se puede interpretar. La hora llega
+ * en varios formatos (del carrito «14:30»; a mano «5:30», «10 am», «4 pm», «1PM», «12 mm», «4 a 6»),
+ * así que no sirve ordenar el texto: «9:00» quedaría después de «10:00» y «5:30» (de la tarde)
+ * antes de «17:30». Sin am/pm se asume horario de tienda: 8–11 es mañana, 12 mediodía y 1–7 tarde.
+ * En un rango («4 a 6», «De 10- 2») cuenta la hora de inicio.
+ */
+function hora_a_minutos(?string $texto): ?int
+{
+    $t = mb_strtolower(trim((string) $texto), 'UTF-8');
+    if ($t === '' || !preg_match('/(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?/', $t, $m)) {
+        return null;
+    }
+    $h = (int) $m[1];
+    $min = isset($m[2]) ? (int) $m[2] : 0;
+    if ($h > 23 || $min > 59) {
+        return null;
+    }
+    if ($h <= 12) {
+        if (preg_match('/\d\s*p\.?\s*m?\b|\bp\.?\s*m\b/u', $t) && !preg_match('/a\.?\s*m\b/u', $t)) {
+            $h = $h === 12 ? 12 : $h + 12;
+        } elseif (preg_match('/\d\s*a\.?\s*m\b|\ba\.?\s*m\b/u', $t)) {
+            $h = $h === 12 ? 0 : $h;
+        } elseif (preg_match('/\bmm\b|mediod/u', $t) || $h === 12) {
+            $h = 12;
+        } elseif ($h <= 7) {
+            $h += 12;       // «5:30», «1:30»: de la tarde
+        }
+    }
+    return $h * 60 + $min;
+}
+
+/** Ordena pedidos por fecha de entrega y, dentro del día, por hora real (sin hora al final). */
+function ordenar_por_entrega(array $pedidos): array
+{
+    usort($pedidos, function ($a, $b) {
+        $f = strcmp((string) $a['fecha_entrega'], (string) $b['fecha_entrega']);
+        if ($f !== 0) {
+            return $f;
+        }
+        $ha = hora_a_minutos($a['hora_entrega']);
+        $hb = hora_a_minutos($b['hora_entrega']);
+        if ($ha === $hb) {
+            return (int) $a['id'] <=> (int) $b['id'];
+        }
+        if ($ha === null) {
+            return 1;
+        }
+        if ($hb === null) {
+            return -1;
+        }
+        return $ha <=> $hb;
+    });
+    return $pedidos;
+}
+
 /* ---------- Acciones (POST) ---------- */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -430,7 +486,7 @@ if ($vista === 'lista') {
         'SELECT * FROM pedidos WHERE fecha_entrega = :f ORDER BY hora_entrega IS NULL, hora_entrega, id'
     );
     $stmt->execute(['f' => $diaSel]);
-    $pedidosDia = $stmt->fetchAll();
+    $pedidosDia = ordenar_por_entrega($stmt->fetchAll());
     $itemsPorPedido = items_de_pedidos($pedidosDia);
 
     // Columnas de la hoja: lo que dice cada pedido en su forma de pago va en su columna.
@@ -467,7 +523,7 @@ if ($vista === 'lista') {
     $sql .= ' ORDER BY fecha_entrega, hora_entrega IS NULL, hora_entrega, id';
     $stmt = db()->prepare($sql);
     $stmt->execute($params);
-    $pedidosSemana = $stmt->fetchAll();
+    $pedidosSemana = ordenar_por_entrega($stmt->fetchAll());
     if ($pagoFiltro !== '') {
         // La forma de pago venía como texto libre, así que se filtra ya normalizada.
         $pedidosSemana = array_values(array_filter(
