@@ -247,9 +247,10 @@ Estructura plana, lista para subir tal cual a cPanel (todo dentro de `public_htm
 /admin                     → Panel de administración (ver 7.1), PROTEGER con contraseña
   index.php                 (login)
   logout.php
-  cambiar-password.php       (reescribe ADMIN_PASSWORD_HASH en includes/config.php)
+  cambiar-password.php       (cambia la contraseña del usuario con sesión, en admin_usuarios)
   dashboard.php                (menú principal del panel)
   pedidos.php                    (agenda visual + lista editable de pedidos, ver admin/CLAUDE.md)
+  usuarios.php, roles.php                (usuarios del panel y roles con permisos por módulo, ver admin/CLAUDE.md)
   caja.php, caja-detalle.php, caja-cajas.php, caja-denominaciones.php, caja-reporte.php  (control de caja por sucursal y caja: apertura, movimientos y cierre con arqueo, ver admin/CLAUDE.md)
   codigos.php                      (reporte: código de ramo → a qué ramo corresponde, ver sección 6.4)
   reportes.php                     (ventas diarias/semanales/mensuales, ver sección 6.6)

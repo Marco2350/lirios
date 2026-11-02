@@ -13,6 +13,8 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/layout.php';
 
+exigir_permiso_pagina('reportes');
+
 /** Cuenta y suma pedidos desde una fecha (inclusive), formato 'Y-m-d'. */
 function resumen_desde(string $desde): array
 {

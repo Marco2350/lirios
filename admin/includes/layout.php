@@ -19,6 +19,7 @@ function admin_icono(string $nombre): string
         'categorias' => '<rect x="3.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3"/>',
         'zonas' => '<path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/>',
         'imagenes' => '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 3.5 3.5L18 12l1.7 1.7"/>',
+        'usuarios' => '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.4c1.9.8 3 2.6 3 5.6"/>',
         'contrasena' => '<circle cx="8" cy="15" r="3.3"/><path d="M10.3 12.7 18 5"/><path d="M15 8l2 2"/><path d="M17.3 5.7 19 7.3"/>',
         'salir' => '<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/>',
         'externo' => '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',
@@ -35,17 +36,26 @@ function admin_icono(string $nombre): string
 
 function admin_header(string $titulo, string $activo = ''): void
 {
-    $items = [
-        'dashboard.php' => ['inicio', 'Inicio'],
-        'pedidos.php' => ['pedidos', 'Pedidos'],
-        'codigos.php' => ['codigos', 'Códigos de ramo'],
-        'caja.php' => ['caja', 'Control de caja'],
-        'reportes.php' => ['reportes', 'Reportes'],
-        'productos.php' => ['productos', 'Productos'],
-        'categorias.php' => ['categorias', 'Categorías'],
-        'zonas-delivery.php' => ['zonas', 'Zonas de delivery'],
-        'subir-imagen.php' => ['imagenes', 'Imágenes'],
+    // [ícono, texto, módulo de permisos]; el menú solo muestra lo que el usuario puede ver.
+    $todos = [
+        'dashboard.php' => ['inicio', 'Inicio', null],
+        'pedidos.php' => ['pedidos', 'Pedidos', 'pedidos'],
+        'codigos.php' => ['codigos', 'Códigos de ramo', 'codigos'],
+        'caja.php' => ['caja', 'Control de caja', 'caja'],
+        'reportes.php' => ['reportes', 'Reportes', 'reportes'],
+        'productos.php' => ['productos', 'Productos', 'productos'],
+        'categorias.php' => ['categorias', 'Categorías', 'categorias'],
+        'zonas-delivery.php' => ['zonas', 'Zonas de delivery', 'zonas'],
+        'subir-imagen.php' => ['imagenes', 'Imágenes', 'imagenes'],
+        'usuarios.php' => ['usuarios', 'Usuarios y roles', 'usuarios'],
     ];
+    $items = [];
+    foreach ($todos as $url => [$icono, $nombre, $modulo]) {
+        if ($modulo === null ? es_dueno() : puede($modulo, 'ver')) {
+            $items[$url] = [$icono, $nombre];
+        }
+    }
+    $yo = usuario_actual();
     ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -58,7 +68,7 @@ function admin_header(string $titulo, string $activo = ''): void
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,500;0,700;0,800&family=Arimo:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css?v=32">
+  <link rel="stylesheet" href="../css/admin.css?v=33">
 </head>
 <body class="admin-shell">
 
@@ -84,6 +94,9 @@ function admin_header(string $titulo, string $activo = ''): void
     </nav>
 
     <div class="sidebar-footer">
+      <?php if ($yo): ?>
+        <span class="sidebar-usuario"><strong><?= e($yo['nombre']) ?></strong><small><?= e($yo['rol_nombre']) ?></small></span>
+      <?php endif; ?>
       <a href="../index.html" target="_blank" rel="noopener">
         <span class="sidebar-icon"><?= admin_icono('externo') ?></span> Ver sitio
       </a>
@@ -120,7 +133,7 @@ function admin_footer(): void
     </div>
   </dialog>
 
-  <script src="../js/admin.js?v=1"></script>
+  <script src="../js/admin.js?v=2"></script>
 </body>
 </html>
     <?php

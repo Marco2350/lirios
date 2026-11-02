@@ -13,6 +13,8 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/layout.php';
 
+exigir_permiso_pagina('codigos');
+
 $hayCodigos = (int) db()->query("SELECT COUNT(*) FROM pedido_items WHERE codigo IS NOT NULL")->fetchColumn() > 0;
 
 $busqueda = trim($_GET['q'] ?? '');

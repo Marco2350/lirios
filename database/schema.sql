@@ -122,7 +122,7 @@ CREATE TABLE pedidos (
   total                DECIMAL(10,2) NOT NULL,
   origen               ENUM('web','manual') NOT NULL DEFAULT 'web',  -- 'manual' = registrado desde /admin/pedidos.php (2026-10-11)
   descripcion          VARCHAR(500) DEFAULT NULL,         -- "Información" de pedidos manuales (sin pedido_items)
-  canal                ENUM('web','tienda','whatsapp') NOT NULL DEFAULT 'web',  -- por dónde entró la venta (2026-10-26)
+  canal                ENUM('web','tienda','whatsapp','instagram','facebook','tiktok') NOT NULL DEFAULT 'web',  -- por dónde entró la venta (2026-10-26; redes sociales 2026-11-01)
   vendedor             VARCHAR(100) DEFAULT NULL,         -- empleado que atendió una venta manual
   creado_en            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (zona_delivery_id) REFERENCES zonas_delivery(id) ON DELETE SET NULL
@@ -309,6 +309,48 @@ INSERT INTO subcategorias (categoria_id, slug, nombre, orden) VALUES
 -- ---------------------------------------------------------
 -- Intentos de acceso al panel admin (freno a fuerza bruta en el login)
 -- ---------------------------------------------------------
+
+-- Usuarios del panel, roles y permisos por módulo (2026-11-01) — se editan desde /admin/usuarios.php y /admin/roles.php
+CREATE TABLE admin_roles (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  nombre      VARCHAR(80) NOT NULL UNIQUE,
+  descripcion VARCHAR(200) DEFAULT NULL,
+  es_dueno    TINYINT(1) NOT NULL DEFAULT 0,  -- 1 = acceso total, sin restricciones
+  creado_en   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE admin_rol_permisos (
+  rol_id          INT NOT NULL,
+  modulo          VARCHAR(40) NOT NULL,
+  puede_ver       TINYINT(1) NOT NULL DEFAULT 0,
+  puede_crear     TINYINT(1) NOT NULL DEFAULT 0,
+  puede_editar    TINYINT(1) NOT NULL DEFAULT 0,
+  puede_eliminar  TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (rol_id, modulo),
+  FOREIGN KEY (rol_id) REFERENCES admin_roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE admin_usuarios (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  usuario       VARCHAR(50) NOT NULL UNIQUE,
+  nombre        VARCHAR(100) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  rol_id        INT NOT NULL,
+  activo        TINYINT(1) NOT NULL DEFAULT 1,
+  ultimo_acceso DATETIME DEFAULT NULL,
+  creado_en     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (rol_id) REFERENCES admin_roles(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO admin_roles (id, nombre, descripcion, es_dueno) VALUES
+  (1, 'Dueño', 'Acceso total al panel, incluido eliminar y administrar usuarios.', 1),
+  (2, 'Servicio al cliente', 'Atiende pedidos: los ve, los crea y los edita, pero no puede eliminar.', 0);
+
+INSERT INTO admin_rol_permisos (rol_id, modulo, puede_ver, puede_crear, puede_editar, puede_eliminar) VALUES
+  (2, 'pedidos', 1, 1, 1, 0);
+
+INSERT INTO admin_usuarios (id, usuario, nombre, password_hash, rol_id) VALUES
+  (1, 'marco', 'Marco Palma', '$2y$10$TvxGpGaHB37/aBhPEyOH1uFcYu/5isbqYer2ewJUOA7cOn7bMwnaa', 1);
 
 CREATE TABLE admin_login_intentos (
   id        INT AUTO_INCREMENT PRIMARY KEY,

@@ -5,7 +5,8 @@
  *  - Lista: donde se EDITA. Cada pedido tiene su estado y su forma de pago
  *    (efectivo / transferencia / tarjeta, la que eligió el cliente en el carrito),
  *    que solo se guardan al pulsar «Guardar» (nada se guarda por accidente).
- *    También se agregan pedidos manuales (mostrador, llamadas) y se eliminan los manuales.
+ *    También se agregan pedidos manuales (mostrador, llamadas, redes sociales), se editan
+ *    todos los datos de cualquier pedido y, con permiso de «eliminar», se borran.
  *  - Agenda: resumen VISUAL de solo lectura, una semana con una columna por
  *    día según la fecha de entrega, con filtros y totales. Se alimenta de
  *    los mismos datos de la Lista; cada tarjeta enlaza al pedido en la Lista.
@@ -19,12 +20,20 @@ require_once __DIR__ . '/includes/layout.php';
 date_default_timezone_set('America/Tegucigalpa');
 
 verificar_csrf();
+exigir_permiso_pagina('pedidos');
 
 const ESTADOS = ['pendiente' => 'Pendiente', 'coordinado' => 'Coordinado', 'entregado' => 'Entregado'];
 const TIPOS_ENTREGA = ['Retiro en tienda', 'Delivery a domicilio'];
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const METODOS_PAGO = ['efectivo' => 'Efectivo', 'transferencia' => 'Transferencia', 'tarjeta' => 'Tarjeta'];
-const CANALES = ['web' => 'Web', 'tienda' => 'Tienda', 'whatsapp' => 'WhatsApp'];
+const CANALES = [
+    'web' => 'Web', 'tienda' => 'Tienda', 'whatsapp' => 'WhatsApp',
+    'instagram' => 'Instagram', 'facebook' => 'Facebook', 'tiktok' => 'TikTok',
+];
+/** Canales que se pueden elegir al anotar/editar un pedido a mano (la web es solo del carrito). */
+const CANALES_MANUALES = ['tienda', 'whatsapp', 'instagram', 'facebook', 'tiktok'];
+/** Porcentaje que se muestra como «impuesto» en el desglose (solo informativo, no cambia el total). */
+const PORCENTAJE_IMPUESTO = 15;
 const PARAMS_VOLVER = ['vista', 'estado', 'semana', 'fecha', 'entrega', 'pago', 'q', 'id', 'sinfecha'];
 
 /** Lunes (Y-m-d) de la semana de $fecha; si no es una fecha válida, la de hoy. */
@@ -83,6 +92,49 @@ function metodo_pago(?string $texto): string
     return '';
 }
 
+/**
+ * Desglose informativo del precio: «impuesto» = 15 % del monto y «valor» = el resto
+ * (995 -> valor 845.75, impuesto 149.25). No modifica el total del pedido; sirve para
+ * cobrar directo en el POS.
+ */
+function desglose_impuesto(float $monto): array
+{
+    $impuesto = round($monto * PORCENTAJE_IMPUESTO / 100, 2);
+    return ['valor' => round($monto - $impuesto, 2), 'impuesto' => $impuesto];
+}
+
+/** Ítems enviados por el formulario de pedido (campos paralelos item_*[]); descarta filas sin producto. */
+function items_desde_post(): array
+{
+    $ids = (array) ($_POST['item_id'] ?? []);
+    $cants = (array) ($_POST['item_cantidad'] ?? []);
+    $precios = (array) ($_POST['item_precio'] ?? []);
+    $items = [];
+    foreach ((array) ($_POST['item_nombre'] ?? []) as $i => $n) {
+        $nombre = limpiar_texto(is_scalar($n) ? (string) $n : '', 200);
+        if ($nombre === '') {
+            continue;
+        }
+        $cantidad = max(1, min(999, (int) ($cants[$i] ?? 1)));
+        $precio = limpiar_precio($precios[$i] ?? 0);
+        $items[] = [
+            'id' => (int) ($ids[$i] ?? 0),
+            'nombre' => $nombre,
+            'cantidad' => $cantidad,
+            'precio' => $precio,
+            'subtotal' => round($cantidad * $precio, 2),
+        ];
+    }
+    return $items;
+}
+
+/** Texto corto de un pedido manual a partir de sus ítems ("2× Ramo de rosas, Peluche"). */
+function resumen_items(array $items): string
+{
+    $partes = array_map(fn($it) => ($it['cantidad'] > 1 ? $it['cantidad'] . '× ' : '') . $it['nombre'], $items);
+    return mb_substr(implode(', ', $partes), 0, 500, 'UTF-8');
+}
+
 /* ---------- Acciones (POST) ---------- */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -114,37 +166,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'agregar_manual') {
         $fecha = $_POST['fecha_entrega'] ?? '';
         $fechaValida = preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha) && DateTime::createFromFormat('!Y-m-d', $fecha);
-        $descripcion = limpiar_texto($_POST['descripcion'] ?? '', 500);
+        $items = items_desde_post();
         $tipo = in_array($_POST['tipo_entrega'] ?? '', TIPOS_ENTREGA, true) ? $_POST['tipo_entrega'] : null;
 
-        if (!$fechaValida || $descripcion === '') {
-            flash('error', 'Para agregar un pedido necesitas al menos la fecha y la información (qué se pidió).');
+        if (!$fechaValida || !$items) {
+            flash('error', 'Para agregar un pedido necesitas la fecha de entrega y al menos un producto.');
             header('Location: ' . $urlVolver);
             exit;
         }
 
         $metodo = $_POST['metodo_pago'] ?? '';
-        $total = limpiar_precio($_POST['total'] ?? 0);
-        $canal = in_array($_POST['canal'] ?? '', ['tienda', 'whatsapp'], true) ? $_POST['canal'] : 'tienda';
+        $total = round(array_sum(array_column($items, 'subtotal')), 2);
+        $canal = in_array($_POST['canal'] ?? '', CANALES_MANUALES, true) ? $_POST['canal'] : 'tienda';
 
-        db()->prepare(
-            'INSERT INTO pedidos (cliente_nombre, telefono, fecha_entrega, hora_entrega, tipo_entrega, estado, total,
-                                  forma_pago, origen, descripcion, canal, vendedor, nota)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'manual\', ?, ?, ?, ?)'
-        )->execute([
-            limpiar_texto($_POST['cliente_nombre'] ?? '', 150) ?: null,
-            limpiar_texto($_POST['telefono'] ?? '', 30) ?: null,
-            $fecha,
-            limpiar_texto($_POST['hora_entrega'] ?? '', 20) ?: null,
-            $tipo,
-            'coordinado',
-            $total,
-            isset(METODOS_PAGO[$metodo]) ? METODOS_PAGO[$metodo] : null,
-            $descripcion,
-            $canal,
-            limpiar_texto($_POST['vendedor'] ?? '', 100) ?: null,
-            limpiar_texto($_POST['nota'] ?? '', 500) ?: null,
-        ]);
+        db()->beginTransaction();
+        try {
+            db()->prepare(
+                'INSERT INTO pedidos (cliente_nombre, telefono, fecha_entrega, hora_entrega, tipo_entrega, direccion, dedicatoria,
+                                      estado, total, forma_pago, origen, descripcion, canal, vendedor, nota)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'manual\', ?, ?, ?, ?)'
+            )->execute([
+                limpiar_texto($_POST['cliente_nombre'] ?? '', 150) ?: null,
+                limpiar_texto($_POST['telefono'] ?? '', 30) ?: null,
+                $fecha,
+                limpiar_texto($_POST['hora_entrega'] ?? '', 20) ?: null,
+                $tipo,
+                limpiar_texto($_POST['direccion'] ?? '', 300) ?: null,
+                limpiar_texto($_POST['dedicatoria'] ?? '', 300) ?: null,
+                'coordinado',
+                $total,
+                isset(METODOS_PAGO[$metodo]) ? METODOS_PAGO[$metodo] : null,
+                resumen_items($items),
+                $canal,
+                limpiar_texto($_POST['vendedor'] ?? '', 100) ?: null,
+                limpiar_texto($_POST['nota'] ?? '', 500) ?: null,
+            ]);
+            $nuevoId = (int) db()->lastInsertId();
+            $insItem = db()->prepare(
+                "INSERT INTO pedido_items (pedido_id, tipo, nombre, precio_unitario, cantidad, subtotal) VALUES (?, 'producto', ?, ?, ?, ?)"
+            );
+            foreach ($items as $it) {
+                $insItem->execute([$nuevoId, $it['nombre'], $it['precio'], $it['cantidad'], $it['subtotal']]);
+            }
+            db()->commit();
+        } catch (Throwable $e) {
+            db()->rollBack();
+            error_log('[lirios] No se pudo guardar el pedido manual: ' . $e->getMessage());
+            flash('error', 'No se pudo guardar el pedido. Intenta de nuevo.');
+            header('Location: ' . $urlVolver);
+            exit;
+        }
         flash('ok', 'Pedido agregado.');
         // Desde la agenda se vuelve a la semana del pedido nuevo; desde la lista, a la lista;
         // desde la hoja del día, al día del pedido nuevo.
@@ -158,6 +229,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($accion === 'editar_pedido') {
+        $stmt = db()->prepare('SELECT * FROM pedidos WHERE id = ?');
+        $stmt->execute([$id]);
+        $pedido = $stmt->fetch();
+        if (!$pedido) {
+            flash('error', 'Ese pedido ya no existe.');
+            header('Location: ' . $urlVolver);
+            exit;
+        }
+
+        $fecha = $_POST['fecha_entrega'] ?? '';
+        $fechaValida = $fecha === '' || (preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha) && DateTime::createFromFormat('!Y-m-d', $fecha));
+        $items = items_desde_post();
+        if (!$fechaValida) {
+            flash('error', 'La fecha de entrega no es válida.');
+            header('Location: ' . $urlVolver);
+            exit;
+        }
+        if (!$items) {
+            flash('error', 'El pedido necesita al menos un producto.');
+            header('Location: ' . $urlVolver);
+            exit;
+        }
+
+        $esManual = $pedido['origen'] === 'manual';
+        $estado = isset(ESTADOS[$_POST['estado'] ?? '']) ? $_POST['estado'] : $pedido['estado'];
+        $tipoPost = $_POST['tipo_entrega'] ?? '';
+        $tipo = ($tipoPost === '') ? null : limpiar_texto($tipoPost, 40);
+        // Forma de pago: si no la cambiaron, se conserva tal cual (puede traer el texto original del cliente).
+        $metodoNuevo = $_POST['metodo_pago'] ?? '';
+        if ($metodoNuevo === metodo_pago($pedido['forma_pago'])) {
+            $forma = $pedido['forma_pago'];
+        } else {
+            $forma = isset(METODOS_PAGO[$metodoNuevo]) ? METODOS_PAGO[$metodoNuevo] : null;
+        }
+        $canal = $esManual && in_array($_POST['canal'] ?? '', CANALES_MANUALES, true) ? $_POST['canal'] : $pedido['canal'];
+        // Total = suma de los productos (+ costo de delivery si el pedido lo tenía registrado).
+        $total = round(array_sum(array_column($items, 'subtotal')) + (float) $pedido['costo_delivery'], 2);
+
+        db()->beginTransaction();
+        try {
+            db()->prepare(
+                'UPDATE pedidos SET cliente_nombre = ?, telefono = ?, fecha_entrega = ?, hora_entrega = ?, tipo_entrega = ?,
+                        direccion = ?, dedicatoria = ?, nota = ?, forma_pago = ?, estado = ?, total = ?, canal = ?,
+                        vendedor = ?, descripcion = ? WHERE id = ?'
+            )->execute([
+                limpiar_texto($_POST['cliente_nombre'] ?? '', 150) ?: null,
+                limpiar_texto($_POST['telefono'] ?? '', 30) ?: null,
+                $fecha === '' ? null : $fecha,
+                limpiar_texto($_POST['hora_entrega'] ?? '', 20) ?: null,
+                $tipo,
+                limpiar_texto($_POST['direccion'] ?? '', 300) ?: null,
+                limpiar_texto($_POST['dedicatoria'] ?? '', 300) ?: null,
+                limpiar_texto($_POST['nota'] ?? '', 500) ?: null,
+                $forma,
+                $estado,
+                $total,
+                $canal,
+                limpiar_texto($_POST['vendedor'] ?? '', 100) ?: null,
+                $esManual ? resumen_items($items) : $pedido['descripcion'],
+                $id,
+            ]);
+
+            // Ítems: se actualizan los existentes (conservan su código de ramo), se agregan los nuevos
+            // y se borran los que quitaron del formulario.
+            $stmt = db()->prepare('SELECT id FROM pedido_items WHERE pedido_id = ?');
+            $stmt->execute([$id]);
+            $existentes = array_flip(array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN)));
+            $conservar = [];
+            $upd = db()->prepare('UPDATE pedido_items SET nombre = ?, cantidad = ?, precio_unitario = ?, subtotal = ? WHERE id = ? AND pedido_id = ?');
+            $ins = db()->prepare("INSERT INTO pedido_items (pedido_id, tipo, nombre, precio_unitario, cantidad, subtotal) VALUES (?, 'producto', ?, ?, ?, ?)");
+            foreach ($items as $it) {
+                if ($it['id'] > 0 && isset($existentes[$it['id']])) {
+                    $upd->execute([$it['nombre'], $it['cantidad'], $it['precio'], $it['subtotal'], $it['id'], $id]);
+                    $conservar[$it['id']] = true;
+                } else {
+                    $ins->execute([$id, $it['nombre'], $it['precio'], $it['cantidad'], $it['subtotal']]);
+                }
+            }
+            $del = db()->prepare('DELETE FROM pedido_items WHERE id = ? AND pedido_id = ?');
+            foreach (array_keys($existentes) as $itemId) {
+                if (!isset($conservar[$itemId])) {
+                    $del->execute([$itemId, $id]);
+                }
+            }
+            db()->commit();
+            flash('ok', 'Pedido actualizado.');
+        } catch (Throwable $e) {
+            db()->rollBack();
+            error_log('[lirios] No se pudo editar el pedido ' . $id . ': ' . $e->getMessage());
+            flash('error', 'No se pudieron guardar los cambios del pedido. Intenta de nuevo.');
+        }
+        header('Location: ' . $urlVolver);
+        exit;
+    }
+
     if ($accion === 'marcar_realizado') {
         // «Realizado» de la hoja del día = estado entregado; desmarcar lo regresa a coordinado.
         db()->prepare(
@@ -167,11 +334,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if ($accion === 'eliminar_manual') {
-        // Solo los pedidos manuales se pueden borrar; los del carrito se conservan siempre.
-        db()->prepare('DELETE FROM pedidos WHERE id = ? AND origen = \'manual\'')->execute([$id]);
+    if ($accion === 'eliminar_pedido') {
+        // Cualquier pedido (web o manual) se puede borrar, p. ej. si el cliente lo canceló; sus
+        // ítems se borran en cascada. Requiere el permiso «eliminar» (exigir_permiso_pagina).
+        db()->prepare('DELETE FROM pedidos WHERE id = ?')->execute([$id]);
         flash('ok', 'Pedido eliminado.');
-        header('Location: ' . url_pedidos(['vista' => $volver['vista'] ?? 'lista', 'estado' => $volver['estado'] ?? '', 'semana' => $volver['semana'] ?? '', 'fecha' => $volver['fecha'] ?? '']));
+        header('Location: ' . $urlVolver);
         exit;
     }
 
@@ -339,6 +507,130 @@ function resumen_productos(array $p, array $itemsPorPedido): string
     return count($items) > 1 ? $texto . ' +' . (count($items) - 1) . ' más' : $texto;
 }
 
+/** Unidades totales de un pedido (suma de cantidades de sus ítems; 0 si no tiene ítems). */
+function unidades_de(array $p, array $itemsPorPedido): int
+{
+    return (int) array_sum(array_map(fn($it) => (int) $it['cantidad'], $itemsPorPedido[$p['id']] ?? []));
+}
+
+/** «3 unidades · Valor L. 845.75 · Impuesto 15 % L. 149.25» (desglose informativo del total). */
+function linea_desglose(float $total, int $unidades): string
+{
+    $d = desglose_impuesto($total);
+    return ($unidades > 0 ? $unidades . ($unidades === 1 ? ' unidad' : ' unidades') . ' · ' : '')
+        . 'Valor L. ' . number_format($d['valor'], 2) . ' · Impuesto ' . PORCENTAJE_IMPUESTO . ' % L. ' . number_format($d['impuesto'], 2);
+}
+
+/** Datos de los pedidos visibles para rellenar el modal «Editar pedido» (solo si el usuario puede editar). */
+$datosEditar = [];
+if (puede('pedidos', 'editar')) {
+    $visibles = $vista === 'lista' ? $pedidos : ($vista === 'dia' ? $pedidosDia : $pedidosSemana);
+    foreach ($visibles as $p) {
+        $its = array_map(fn($it) => [
+            'id' => (int) $it['id'], 'nombre' => $it['nombre'],
+            'cantidad' => (int) $it['cantidad'], 'precio' => (float) $it['precio_unitario'],
+        ], $itemsPorPedido[$p['id']] ?? []);
+        if (!$its && $p['origen'] === 'manual' && $p['descripcion']) {
+            // Pedido manual antiguo (solo texto + total): se convierte en un ítem editable.
+            $its = [['id' => 0, 'nombre' => $p['descripcion'], 'cantidad' => 1, 'precio' => (float) $p['total']]];
+        }
+        $datosEditar[$p['id']] = [
+            'id' => (int) $p['id'], 'manual' => $p['origen'] === 'manual',
+            'cliente' => (string) $p['cliente_nombre'], 'telefono' => (string) $p['telefono'],
+            'fecha' => (string) $p['fecha_entrega'], 'hora' => (string) $p['hora_entrega'],
+            'tipo' => (string) $p['tipo_entrega'], 'direccion' => (string) $p['direccion'],
+            'dedicatoria' => (string) $p['dedicatoria'], 'nota' => (string) $p['nota'],
+            'pago' => metodo_pago($p['forma_pago']), 'canal' => (string) $p['canal'],
+            'vendedor' => (string) $p['vendedor'], 'estado' => $p['estado'],
+            'costoDelivery' => (float) $p['costo_delivery'], 'items' => $its,
+        ];
+    }
+}
+
+/**
+ * Campos del formulario de pedido (compartidos por «Agregar» y «Editar»). $pre = prefijo de ids.
+ * Los ítems llevan producto, cantidad y precio; el total, las unidades y el desglose del 15 % se
+ * calculan en vivo (js al final de la página) y el servidor vuelve a calcular el total.
+ */
+function campos_pedido(string $pre, bool $edicion, string $fechaInicial = ''): void
+{
+    $canales = $edicion ? CANALES : array_intersect_key(CANALES, array_flip(CANALES_MANUALES));
+    ?>
+    <div class="items-editor" data-items-editor>
+      <div class="items-cab"><span>Producto *</span><span>Cant.</span><span>Precio (L.)</span><span></span></div>
+      <div class="items-filas" data-items-filas></div>
+      <button type="button" class="btn mini secundario" data-item-agregar><?= ico('mas') ?> Producto</button>
+      <div class="items-totales">
+        <span data-total-unidades>0 unidades</span>
+        <strong data-total-monto>L. 0.00</strong>
+        <small data-total-desglose></small>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div>
+        <label for="<?= e($pre) ?>-fecha">Fecha de entrega<?= $edicion ? '' : ' *' ?></label>
+        <input type="date" id="<?= e($pre) ?>-fecha" name="fecha_entrega" <?= $edicion ? '' : 'required' ?> value="<?= e($fechaInicial) ?>">
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-hora">Hora</label>
+        <input type="text" id="<?= e($pre) ?>-hora" name="hora_entrega" maxlength="20" placeholder="Ej. 2:30 p.m.">
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-cliente">Cliente</label>
+        <input type="text" id="<?= e($pre) ?>-cliente" name="cliente_nombre" maxlength="150">
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-tel">Teléfono</label>
+        <input type="text" id="<?= e($pre) ?>-tel" name="telefono" maxlength="30" inputmode="tel">
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-tipo">Recoge o envío</label>
+        <select id="<?= e($pre) ?>-tipo" name="tipo_entrega">
+          <option value="">Sin especificar</option>
+          <?php foreach (TIPOS_ENTREGA as $t): ?><option value="<?= e($t) ?>"><?= e($t) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-metodo">Forma de pago</label>
+        <select id="<?= e($pre) ?>-metodo" name="metodo_pago">
+          <option value="">Sin definir</option>
+          <?php foreach (METODOS_PAGO as $k => $etq): ?><option value="<?= e($k) ?>"><?= e($etq) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-canal">¿Por dónde se vendió?</label>
+        <select id="<?= e($pre) ?>-canal" name="canal">
+          <?php foreach ($canales as $k => $etq): ?><option value="<?= e($k) ?>"><?= e($k === 'tienda' ? 'Tienda (en físico)' : $etq) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-vendedor">Vendido por</label>
+        <input type="text" id="<?= e($pre) ?>-vendedor" name="vendedor" maxlength="100" placeholder="Nombre del empleado">
+      </div>
+      <?php if ($edicion): ?>
+      <div>
+        <label for="<?= e($pre) ?>-estado">Estado</label>
+        <select id="<?= e($pre) ?>-estado" name="estado">
+          <?php foreach (ESTADOS as $k => $etq): ?><option value="<?= e($k) ?>"><?= e($etq) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <?php endif; ?>
+      <div class="full">
+        <label for="<?= e($pre) ?>-dir">Dirección de entrega</label>
+        <input type="text" id="<?= e($pre) ?>-dir" name="direccion" maxlength="300">
+      </div>
+      <div class="full">
+        <label for="<?= e($pre) ?>-ded">Dedicatoria</label>
+        <input type="text" id="<?= e($pre) ?>-ded" name="dedicatoria" maxlength="300">
+      </div>
+      <div class="full">
+        <label for="<?= e($pre) ?>-nota">Detalles</label>
+        <input type="text" id="<?= e($pre) ?>-nota" name="nota" maxlength="500" placeholder="Ej. Paga el resto al recoger, entrega en Megapaca">
+      </div>
+    </div>
+    <?php
+}
+
 /** Datos para volver a esta misma pantalla tras guardar (campo oculto "volver"). */
 $volverQs = http_build_query(array_intersect_key($_GET, array_flip(PARAMS_VOLVER)));
 if ($vista === 'dia') {
@@ -444,7 +736,7 @@ admin_header('Pedidos', 'pedidos.php');
     <a class="ped-limpiar" href="<?= e(url_pedidos($vista === 'agenda' ? ['vista' => 'agenda', 'semana' => $lunes] : ['vista' => 'lista', 'estado' => $estadoFiltro])) ?>">Quitar filtros</a>
   <?php endif; ?>
 
-  <button type="button" class="btn ped-nuevo" data-abrir-modal="modal-pedido-manual"><?= ico('mas') ?> Pedido</button>
+  <?php if (puede('pedidos', 'crear')): ?><button type="button" class="btn ped-nuevo" data-abrir-modal="modal-pedido-manual"><?= ico('mas') ?> Pedido</button><?php endif; ?>
 </form>
 
 <?php if ($vista === 'dia'): /* ============ Hoja del día ============ */ ?>
@@ -520,6 +812,7 @@ admin_header('Pedidos', 'pedidos.php');
           <td class="c-info">
             <a href="<?= e(url_pedidos(['vista' => 'lista', 'id' => $p['id']])) ?>"><strong><?= e($p['cliente_nombre'] ?: 'Sin nombre') ?></strong></a>
             <span class="dia-prod"><?= e(resumen_productos($p, $itemsPorPedido)) ?></span>
+            <span class="dia-desglose"><?= e(linea_desglose((float) $p['total'], unidades_de($p, $itemsPorPedido))) ?></span>
             <span class="dia-canal canal-<?= e($p['canal'] ?? 'web') ?>"><?= e(CANALES[$p['canal'] ?? 'web'] ?? 'Web') ?><?= !empty($p['vendedor']) ? ' · ' . e($p['vendedor']) : '' ?></span>
           </td>
           <td class="c-chk">
@@ -540,12 +833,15 @@ admin_header('Pedidos', 'pedidos.php');
           <?php if ($hayPagoSinDefinir): ?><td class="c-monto"><?= $mp === '' ? $monto((float) $p['total']) : '' ?></td><?php endif; ?>
           <td class="c-det"><?= e(implode(' · ', $detalles)) ?></td>
           <td class="c-acc">
-            <?php if ($p['origen'] === 'manual'): ?>
+            <?php if (puede('pedidos', 'editar')): ?>
+              <button type="button" class="btn mini secundario" data-editar-pedido="<?= (int) $p['id'] ?>">Editar</button>
+            <?php endif; ?>
+            <?php if (puede('pedidos', 'eliminar')): ?>
               <button type="button" class="btn mini peligro" data-confirmar-eliminar="dia-del-<?= (int) $p['id'] ?>"
-                      data-confirmar-mensaje="¿Eliminar este pedido manual? Esta acción no se puede deshacer.">Eliminar</button>
+                      data-confirmar-mensaje="¿Eliminar el pedido de <?= e($p['cliente_nombre'] ?: 'este cliente') ?>? Esta acción no se puede deshacer.">Eliminar</button>
               <form id="dia-del-<?= (int) $p['id'] ?>" method="post" action="pedidos.php">
                 <?= csrf_field() ?>
-                <input type="hidden" name="accion" value="eliminar_manual">
+                <input type="hidden" name="accion" value="eliminar_pedido">
                 <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
                 <input type="hidden" name="volver" value="<?= e($volverDia) ?>">
               </form>
@@ -697,6 +993,7 @@ admin_header('Pedidos', 'pedidos.php');
             'nota' => (string) $p['nota'],
             'pago' => $mp ? METODOS_PAGO[$mp] : ((string) $p['forma_pago'] ?: 'Pago sin definir'),
             'total' => 'L. ' . number_format((float) $p['total'], 2),
+            'desglose' => linea_desglose((float) $p['total'], unidades_de($p, $itemsPorPedido)),
             'estado' => ESTADOS[$p['estado']] ?? $p['estado'],
             'estadoClave' => $p['estado'],
             'manual' => $p['origen'] === 'manual',
@@ -719,9 +1016,11 @@ admin_header('Pedidos', 'pedidos.php');
   <dl class="det-datos" id="det-datos"></dl>
   <div class="det-items" id="det-items"></div>
   <div class="det-total"><span>Total</span><strong id="det-total"></strong></div>
+  <p class="det-desglose" id="det-desglose"></p>
   <div class="det-acciones">
     <a class="btn mini secundario" id="det-wa" target="_blank" rel="noopener"><?= ico('wa') ?> WhatsApp</a>
-    <a class="btn mini" id="det-lista">Editar en la Lista</a>
+    <?php if (puede('pedidos', 'editar')): ?><button type="button" class="btn mini" id="det-editar">Editar pedido</button><?php endif; ?>
+    <a class="btn mini secundario" id="det-lista">Ver en la Lista</a>
   </div>
 </dialog>
 
@@ -729,6 +1028,9 @@ admin_header('Pedidos', 'pedidos.php');
 (function () {
   var datos = <?= json_encode($datosDetalle, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
   var dlg = document.getElementById('modal-detalle');
+  var detId = 0;
+  var btnEditar = document.getElementById('det-editar');
+  if (btnEditar) btnEditar.addEventListener('click', function () { dlg.close(); if (window.abrirEditarPedido) window.abrirEditarPedido(detId); });
   function el(tag, cls, txt) { var n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; }
   function fila(dl, k, v) { if (!v) return; dl.appendChild(el('dt', null, k)); dl.appendChild(el('dd', null, v)); }
 
@@ -737,6 +1039,7 @@ admin_header('Pedidos', 'pedidos.php');
       var d = datos[a.dataset.ped];
       if (!d || !dlg.showModal) return;       // sin soporte de <dialog>: sigue el enlace a la Lista
       ev.preventDefault();
+      detId = d.id;
       document.getElementById('det-fecha').textContent = d.fecha + (d.hora ? ' · ' + d.hora : '');
       document.getElementById('det-cliente').textContent = d.cliente;
       var chips = document.getElementById('det-chips'); chips.textContent = '';
@@ -749,13 +1052,14 @@ admin_header('Pedidos', 'pedidos.php');
       fila(dl, 'Teléfono', d.telefono); fila(dl, 'Dirección', d.direccion);
       fila(dl, 'Dedicatoria', d.dedicatoria); fila(dl, 'Nota', d.nota);
       var it = document.getElementById('det-items'); it.textContent = '';
-      if (d.manual && d.descripcion) { it.appendChild(el('p', 'det-item', d.descripcion)); }
+      if (d.manual && d.descripcion && !d.items.length) { it.appendChild(el('p', 'det-item', d.descripcion)); }
       d.items.forEach(function (i) {
         var p = el('p', 'det-item'); p.appendChild(el('span', null, i.n));
         if (i.c) p.appendChild(el('code', null, i.c));
         p.appendChild(el('b', null, i.s)); it.appendChild(p);
       });
       document.getElementById('det-total').textContent = d.total;
+      document.getElementById('det-desglose').textContent = d.desglose;
       var wa = document.getElementById('det-wa');
       if (d.wa) { wa.href = 'https://wa.me/' + d.wa; wa.hidden = false; } else { wa.hidden = true; }
       document.getElementById('det-lista').href = d.lista;
@@ -802,6 +1106,7 @@ admin_header('Pedidos', 'pedidos.php');
           <h3>
             <?= e($p['cliente_nombre'] ?: 'Sin nombre') ?>
             <?php if ($p['origen'] === 'manual'): ?><span class="pill neutro">Manual</span><?php endif; ?>
+            <?php if (($p['canal'] ?? 'web') !== 'web'): ?><span class="pill neutro"><?= e(CANALES[$p['canal']] ?? $p['canal']) ?></span><?php endif; ?>
             <?php if (es_retiro($p['tipo_entrega'])): ?><span class="pill neutro">Recoge</span>
             <?php elseif (es_envio($p['tipo_entrega'])): ?><span class="pill neutro">Envío</span><?php endif; ?>
           </h3>
@@ -812,7 +1117,7 @@ admin_header('Pedidos', 'pedidos.php');
           <details class="ped-mas">
             <summary>Ver detalle</summary>
             <div class="ped-detalle">
-              <?php if ($p['origen'] !== 'manual' && $items): ?>
+              <?php if ($items): ?>
                 <ul>
                   <?php foreach ($items as $it): ?>
                     <li><?= (int) $it['cantidad'] ?>× <?= e($it['nombre']) ?><?php if ($it['codigo']): ?> <code><?= e($it['codigo']) ?></code><?php endif; ?> <b>L. <?= number_format((float) $it['subtotal'], 2) ?></b>
@@ -820,6 +1125,7 @@ admin_header('Pedidos', 'pedidos.php');
                   <?php endforeach; ?>
                 </ul>
               <?php endif; ?>
+              <p><?= ico('nota') ?><?= e(linea_desglose((float) $p['total'], unidades_de($p, $itemsPorPedido))) ?></p>
               <?php if ($p['direccion']): ?><p><?= ico('pin') ?><?= e($p['direccion']) ?></p><?php endif; ?>
               <?php if ($p['zona_delivery_nombre']): ?><p><?= ico('pin') ?>Zona: <?= e($p['zona_delivery_nombre']) ?> — L. <?= number_format((float) $p['costo_delivery'], 2) ?></p><?php endif; ?>
               <?php if ($p['dedicatoria']): ?><p><?= ico('nota') ?>Dedicatoria: <?= e($p['dedicatoria']) ?></p><?php endif; ?>
@@ -846,9 +1152,12 @@ admin_header('Pedidos', 'pedidos.php');
           </select>
           <div class="ped-botones">
             <button type="submit" form="<?= e($fid) ?>" class="btn mini secundario lista-guardar">Guardar</button>
-            <?php if ($p['origen'] === 'manual'): ?>
+            <?php if (puede('pedidos', 'editar')): ?>
+              <button type="button" class="btn mini secundario" data-editar-pedido="<?= (int) $p['id'] ?>">Editar</button>
+            <?php endif; ?>
+            <?php if (puede('pedidos', 'eliminar')): ?>
               <button type="button" class="btn mini peligro" data-confirmar-eliminar="del-<?= (int) $p['id'] ?>"
-                      data-confirmar-mensaje="¿Eliminar este pedido manual? Esta acción no se puede deshacer.">Eliminar</button>
+                      data-confirmar-mensaje="¿Eliminar el pedido de <?= e($p['cliente_nombre'] ?: 'este cliente') ?>? Esta acción no se puede deshacer.">Eliminar</button>
             <?php endif; ?>
           </div>
         </div>
@@ -864,10 +1173,10 @@ admin_header('Pedidos', 'pedidos.php');
       <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
       <input type="hidden" name="volver" value="<?= e($volverQs) ?>">
     </form>
-    <?php if ($p['origen'] === 'manual'): ?>
+    <?php if (puede('pedidos', 'eliminar')): ?>
       <form id="del-<?= (int) $p['id'] ?>" method="post" action="pedidos.php">
         <?= csrf_field() ?>
-        <input type="hidden" name="accion" value="eliminar_manual">
+        <input type="hidden" name="accion" value="eliminar_pedido">
         <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
         <input type="hidden" name="volver" value="<?= e($volverQs) ?>">
       </form>
@@ -888,74 +1197,151 @@ admin_header('Pedidos', 'pedidos.php');
 
 <?php endif; ?>
 
+<?php if (puede('pedidos', 'crear')): ?>
 <!-- ============ Modal compartido: agregar pedido manual ============ -->
 <dialog class="modal-portada modal-pedido" id="modal-pedido-manual">
-  <form method="post" action="pedidos.php">
+  <form method="post" action="pedidos.php" data-enter-siguiente>
     <?= csrf_field() ?>
     <input type="hidden" name="accion" value="agregar_manual">
     <input type="hidden" name="volver" value="<?= e($volverQs) ?>">
-    <h3>Agregar pedido manual</h3>
-    <p class="modal-ayuda">Para ventas en tienda o por WhatsApp que no pasaron por el carrito.</p>
-    <div class="form-grid">
-      <div class="full">
-        <label for="pm-desc">¿Qué se pidió? *</label>
-        <input type="text" id="pm-desc" name="descripcion" maxlength="500" required placeholder="Ej. Ramo con dinero">
-      </div>
-      <div>
-        <label for="pm-fecha">Fecha de entrega *</label>
-        <input type="date" id="pm-fecha" name="fecha_entrega" required value="<?= e($vista === 'dia' ? $diaSel : date('Y-m-d')) ?>">
-      </div>
-      <div>
-        <label for="pm-hora">Hora</label>
-        <input type="text" id="pm-hora" name="hora_entrega" maxlength="20" placeholder="Ej. 2:30 p.m.">
-      </div>
-      <div>
-        <label for="pm-cliente">Cliente</label>
-        <input type="text" id="pm-cliente" name="cliente_nombre" maxlength="150">
-      </div>
-      <div>
-        <label for="pm-tel">Teléfono</label>
-        <input type="text" id="pm-tel" name="telefono" maxlength="30" inputmode="tel">
-      </div>
-      <div>
-        <label for="pm-tipo">Recoge o envío</label>
-        <select id="pm-tipo" name="tipo_entrega">
-          <option value="">Sin especificar</option>
-          <?php foreach (TIPOS_ENTREGA as $t): ?><option value="<?= e($t) ?>"><?= e($t) ?></option><?php endforeach; ?>
-        </select>
-      </div>
-      <div>
-        <label for="pm-metodo">Forma de pago</label>
-        <select id="pm-metodo" name="metodo_pago">
-          <option value="">Sin definir</option>
-          <?php foreach (METODOS_PAGO as $k => $etq): ?><option value="<?= e($k) ?>"><?= e($etq) ?></option><?php endforeach; ?>
-        </select>
-      </div>
-      <div>
-        <label for="pm-canal">¿Por dónde se vendió?</label>
-        <select id="pm-canal" name="canal">
-          <option value="tienda">Tienda (en físico)</option>
-          <option value="whatsapp">WhatsApp</option>
-        </select>
-      </div>
-      <div>
-        <label for="pm-vendedor">Vendido por</label>
-        <input type="text" id="pm-vendedor" name="vendedor" maxlength="100" placeholder="Nombre del empleado">
-      </div>
-      <div>
-        <label for="pm-total">Total del pedido (L.)</label>
-        <input type="number" id="pm-total" name="total" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
-      </div>
-      <div class="full">
-        <label for="pm-nota">Detalles</label>
-        <input type="text" id="pm-nota" name="nota" maxlength="500" placeholder="Ej. Paga el resto al recoger, entrega en Megapaca">
-      </div>
-    </div>
+    <h3>Agregar pedido</h3>
+    <p class="modal-ayuda">Para ventas en tienda, WhatsApp, Instagram, Facebook o TikTok que no pasaron por el carrito. Con Enter pasas al siguiente campo.</p>
+    <?php campos_pedido('pm', false, $vista === 'dia' ? $diaSel : date('Y-m-d')); ?>
     <div class="modal-portada-acciones">
       <button type="button" class="btn mini secundario" data-cerrar-modal>Cancelar</button>
       <button type="submit" class="btn mini">Agregar pedido</button>
     </div>
   </form>
 </dialog>
+<?php endif; ?>
+
+<?php if (puede('pedidos', 'editar')): ?>
+<!-- ============ Modal compartido: editar cualquier pedido ============ -->
+<dialog class="modal-portada modal-pedido" id="modal-pedido-editar">
+  <form method="post" action="pedidos.php" id="form-editar-pedido" data-enter-siguiente>
+    <?= csrf_field() ?>
+    <input type="hidden" name="accion" value="editar_pedido">
+    <input type="hidden" name="id" value="">
+    <input type="hidden" name="volver" value="<?= e($volverQs) ?>">
+    <h3>Editar pedido</h3>
+    <p class="modal-ayuda">Corrige o completa los datos del pedido. El total se recalcula con los productos.</p>
+    <?php campos_pedido('pe', true); ?>
+    <div class="modal-portada-acciones">
+      <button type="button" class="btn mini secundario" data-cerrar-modal>Cancelar</button>
+      <button type="submit" class="btn mini">Guardar cambios</button>
+    </div>
+  </form>
+</dialog>
+<?php endif; ?>
+
+<script>
+// Editor de productos del pedido: filas con producto, cantidad y precio; total, unidades y
+// desglose del <?= PORCENTAJE_IMPUESTO ?> % (solo informativo) se calculan en vivo.
+(function () {
+  var PCT = <?= PORCENTAJE_IMPUESTO ?>;
+  var datos = <?= json_encode($datosEditar, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
+  var costoDelivery = 0;
+
+  function el(tag, cls, txt) { var n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; }
+  function dinero(n) { return n.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function desglose(m) { var imp = Math.round(m * PCT) / 100; return { imp: imp, valor: Math.round((m - imp) * 100) / 100 }; }
+  function campo(tipo, nombre, cls, extra) {
+    var i = el('input', cls); i.type = tipo; i.name = nombre;
+    Object.keys(extra || {}).forEach(function (k) { i[k] = extra[k]; });
+    return i;
+  }
+
+  function recalcular(ed) {
+    var total = 0, unidades = 0;
+    ed.querySelectorAll('.item-fila').forEach(function (f) {
+      var c = Math.max(1, parseInt(f.querySelector('[name="item_cantidad[]"]').value, 10) || 1);
+      var p = Math.max(0, parseFloat(f.querySelector('[name="item_precio[]"]').value) || 0);
+      var sub = Math.round(c * p * 100) / 100, d = desglose(sub);
+      f.querySelector('.item-sub').textContent = sub > 0 ? 'Valor L. ' + dinero(d.valor) + ' · Imp. L. ' + dinero(d.imp) : '';
+      total += sub; unidades += c;
+    });
+    total += costoDelivery;
+    var d = desglose(total);
+    ed.querySelector('[data-total-unidades]').textContent = unidades + (unidades === 1 ? ' unidad' : ' unidades');
+    ed.querySelector('[data-total-monto]').textContent = 'L. ' + dinero(total);
+    ed.querySelector('[data-total-desglose]').textContent = 'Valor L. ' + dinero(d.valor) + ' · Impuesto ' + PCT + ' % L. ' + dinero(d.imp);
+  }
+
+  function agregarFila(ed, it) {
+    var f = el('div', 'item-fila');
+    var id = campo('hidden', 'item_id[]'); id.value = it ? it.id : 0;
+    var n = campo('text', 'item_nombre[]', 'item-nombre', { maxLength: 200, placeholder: 'Ej. Ramo de rosas' });
+    n.setAttribute('aria-label', 'Producto'); n.value = it ? it.nombre : '';
+    var c = campo('number', 'item_cantidad[]', 'item-cant', { min: 1, max: 999, step: 1, inputMode: 'numeric' });
+    c.setAttribute('aria-label', 'Cantidad'); c.value = it ? it.cantidad : 1;
+    var p = campo('number', 'item_precio[]', 'item-precio', { min: 0, step: '0.01', inputMode: 'decimal', placeholder: '0.00' });
+    p.setAttribute('aria-label', 'Precio unitario'); p.value = it && it.precio ? it.precio : '';
+    var x = el('button', 'item-quitar', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Quitar producto');
+    x.addEventListener('click', function () {
+      if (ed.querySelectorAll('.item-fila').length > 1) { f.remove(); } else { n.value = ''; p.value = ''; c.value = 1; }
+      recalcular(ed);
+    });
+    var sub = el('div', 'item-sub');
+    [id, n, c, p, x, sub].forEach(function (k) { f.appendChild(k); });
+    ed.querySelector('[data-items-filas]').appendChild(f);
+    recalcular(ed);
+    return f;
+  }
+
+  function vaciarFilas(ed) { ed.querySelector('[data-items-filas]').textContent = ''; }
+
+  document.querySelectorAll('[data-items-editor]').forEach(function (ed) {
+    ed.addEventListener('input', function () { recalcular(ed); });
+    ed.querySelector('[data-item-agregar]').addEventListener('click', function () { agregarFila(ed).querySelector('.item-nombre').focus(); });
+    // Enter en el precio de la última fila agrega otra fila (en vez de enviar el formulario).
+    ed.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || !e.target.classList.contains('item-precio')) return;
+      var filas = ed.querySelectorAll('.item-fila');
+      if (e.target.closest('.item-fila') === filas[filas.length - 1] && e.target.value !== '') {
+        e.preventDefault();
+        agregarFila(ed).querySelector('.item-nombre').focus();
+      }
+    });
+    agregarFila(ed);
+  });
+
+  var dlg = document.getElementById('modal-pedido-editar');
+  if (!dlg) return;
+  var form = document.getElementById('form-editar-pedido');
+  var ed = form.querySelector('[data-items-editor]');
+
+  window.abrirEditarPedido = function (id) {
+    var d = datos[id];
+    if (!d) return;
+    form.elements['id'].value = d.id;
+    form.elements['cliente_nombre'].value = d.cliente;
+    form.elements['telefono'].value = d.telefono;
+    form.elements['fecha_entrega'].value = d.fecha;
+    form.elements['hora_entrega'].value = d.hora;
+    var tipo = form.elements['tipo_entrega'];
+    if (d.tipo && !Array.prototype.some.call(tipo.options, function (o) { return o.value === d.tipo; })) {
+      var o = el('option', null, d.tipo); o.value = d.tipo; tipo.appendChild(o);   // valor antiguo del cliente
+    }
+    tipo.value = d.tipo;
+    form.elements['metodo_pago'].value = d.pago;
+    var canal = form.elements['canal'];
+    canal.value = d.canal; canal.disabled = !d.manual;   // los pedidos de la web conservan su canal
+    form.elements['vendedor'].value = d.vendedor;
+    form.elements['estado'].value = d.estado;
+    form.elements['direccion'].value = d.direccion;
+    form.elements['dedicatoria'].value = d.dedicatoria;
+    form.elements['nota'].value = d.nota;
+    costoDelivery = d.costoDelivery || 0;
+    vaciarFilas(ed);
+    (d.items.length ? d.items : [null]).forEach(function (it) { agregarFila(ed, it); });
+    dlg.showModal();
+  };
+
+  document.querySelectorAll('[data-editar-pedido]').forEach(function (b) {
+    b.addEventListener('click', function () { window.abrirEditarPedido(b.dataset.editarPedido); });
+  });
+  dlg.addEventListener('close', function () { costoDelivery = 0; });
+})();
+</script>
 
 <?php admin_footer(); ?>

@@ -5,6 +5,12 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/layout.php';
 
+// El resumen general muestra ingresos y catálogo: solo el dueño; los demás van directo a su primer módulo.
+if (!es_dueno()) {
+    header('Location: ' . primera_pagina_permitida());
+    exit;
+}
+
 const ESTADOS_PEDIDO = ['pendiente' => 'Pendiente', 'coordinado' => 'Coordinado', 'entregado' => 'Entregado'];
 
 $totalProductos = (int) db()->query('SELECT COUNT(*) FROM productos')->fetchColumn();

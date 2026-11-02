@@ -74,3 +74,28 @@
     }, 3200);
   }
 })();
+
+/* ---------- Enter = pasar al siguiente campo ----------
+   En los formularios marcados con data-enter-siguiente (pedidos, usuarios),
+   Enter ya no envía el formulario: mueve el cursor al siguiente campo, como
+   pasar de celda en una hoja de cálculo. En el último campo sí envía.
+   Los botones, los textarea y los campos que ya manejaron la tecla
+   (preventDefault, p. ej. el editor de productos del pedido) se respetan. */
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing) return;
+  var campo = e.target;
+  if (!campo.matches || !campo.matches('input, select')) return;
+  if (campo.type === 'submit' || campo.type === 'button' || campo.type === 'checkbox') return;
+  var form = campo.closest('form[data-enter-siguiente]');
+  if (!form) return;
+
+  var campos = Array.prototype.filter.call(
+    form.querySelectorAll('input, select, textarea'),
+    function (c) { return c.type !== 'hidden' && !c.disabled && c.offsetParent !== null; }
+  );
+  var i = campos.indexOf(campo);
+  if (i === -1 || i === campos.length - 1) return;   // último campo: Enter envía normal
+  e.preventDefault();
+  campos[i + 1].focus();
+  if (campos[i + 1].select && campos[i + 1].type !== 'date') campos[i + 1].select();
+});

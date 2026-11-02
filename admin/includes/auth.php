@@ -5,10 +5,13 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/permisos.php';
 
 admin_session_start();
 
-if (empty($_SESSION['lirios_admin'])) {
+if (empty($_SESSION['lirios_admin']) || usuario_actual() === null) {
+    // Sin sesión, o la cuenta fue desactivada / eliminada mientras estaba abierta.
+    unset($_SESSION['lirios_admin'], $_SESSION['usuario_id']);
     header('Location: index.php');
     exit;
 }
