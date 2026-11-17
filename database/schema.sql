@@ -107,6 +107,8 @@ CREATE TABLE pedidos (
   id                   INT AUTO_INCREMENT PRIMARY KEY,
   cliente_nombre       VARCHAR(150) DEFAULT NULL,
   telefono             VARCHAR(30) DEFAULT NULL,
+  receptor_nombre      VARCHAR(150) DEFAULT NULL,  -- quien RECIBE el arreglo (cliente_nombre/telefono = quien paga; 2026-11-16)
+  receptor_telefono    VARCHAR(30) DEFAULT NULL,
   fecha_entrega        DATE DEFAULT NULL,
   hora_entrega         VARCHAR(20) DEFAULT NULL,
   tipo_entrega         VARCHAR(40) DEFAULT NULL,

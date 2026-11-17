@@ -70,8 +70,10 @@ function construir_cuerpo_correo_pedido(int $pedidoId, array $pedido): string
 
     $lineas[] = 'Total: L. ' . number_format($pedido['total'], 2);
     $lineas[] = '';
-    $lineas[] = 'Nombre: ' . $vacio($pedido['cliente']);
-    $lineas[] = 'Teléfono: ' . $vacio($pedido['telefono']);
+    $lineas[] = 'Cliente (quien paga): ' . $vacio($pedido['cliente']);
+    $lineas[] = 'Teléfono del cliente: ' . $vacio($pedido['telefono']);
+    $lineas[] = 'Recibe: ' . $vacio($pedido['receptorNombre'] ?? null);
+    $lineas[] = 'Teléfono de quien recibe: ' . $vacio($pedido['receptorTelefono'] ?? null);
     $lineas[] = 'Entrega: ' . $vacio($pedido['fechaEntrega']) . ' / Hora: ' . $vacio($pedido['horaEntrega']);
     $lineas[] = 'Delivery o retiro: ' . $vacio($pedido['tipoEntrega']);
     if ($pedido['zonaDeliveryNombre']) {

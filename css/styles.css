@@ -2479,3 +2479,40 @@ p {
     align-items: center;
   }
 }
+
+/* Datos del cliente (quien paga) y de quien recibe (2026-11-16): bloques
+   separados para que no se confundan los datos de uno con los del otro. */
+.form-section-buyer {
+  margin-top: 1.1rem;
+  border-left: 3px solid var(--mostaza);
+}
+
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--carbon);
+  cursor: pointer;
+}
+
+.check-field input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--mostaza-dark);
+  flex-shrink: 0;
+}
+
+.field-error {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--error-texto);
+  margin-top: 0.3rem;
+}
+
+#recipient-fields[hidden] {
+  display: none;
+}

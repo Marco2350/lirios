@@ -238,12 +238,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         db()->beginTransaction();
         try {
             db()->prepare(
-                'INSERT INTO pedidos (cliente_nombre, telefono, fecha_entrega, hora_entrega, tipo_entrega, direccion, dedicatoria,
+                'INSERT INTO pedidos (cliente_nombre, telefono, receptor_nombre, receptor_telefono, fecha_entrega, hora_entrega, tipo_entrega, direccion, dedicatoria,
                                       estado, total, forma_pago, origen, descripcion, canal, vendedor, nota)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'manual\', ?, ?, ?, ?)'
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'manual\', ?, ?, ?, ?)'
             )->execute([
                 limpiar_texto($_POST['cliente_nombre'] ?? '', 150) ?: null,
                 limpiar_texto($_POST['telefono'] ?? '', 30) ?: null,
+                limpiar_texto($_POST['receptor_nombre'] ?? '', 150) ?: null,
+                limpiar_texto($_POST['receptor_telefono'] ?? '', 30) ?: null,
                 $fecha,
                 limpiar_texto($_POST['hora_entrega'] ?? '', 20) ?: null,
                 $tipo,
@@ -327,12 +329,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         db()->beginTransaction();
         try {
             db()->prepare(
-                'UPDATE pedidos SET cliente_nombre = ?, telefono = ?, fecha_entrega = ?, hora_entrega = ?, tipo_entrega = ?,
+                'UPDATE pedidos SET cliente_nombre = ?, telefono = ?, receptor_nombre = ?, receptor_telefono = ?, fecha_entrega = ?, hora_entrega = ?, tipo_entrega = ?,
                         direccion = ?, dedicatoria = ?, nota = ?, forma_pago = ?, estado = ?, total = ?, canal = ?,
                         vendedor = ?, descripcion = ? WHERE id = ?'
             )->execute([
                 limpiar_texto($_POST['cliente_nombre'] ?? '', 150) ?: null,
                 limpiar_texto($_POST['telefono'] ?? '', 30) ?: null,
+                limpiar_texto($_POST['receptor_nombre'] ?? '', 150) ?: null,
+                limpiar_texto($_POST['receptor_telefono'] ?? '', 30) ?: null,
                 $fecha === '' ? null : $fecha,
                 limpiar_texto($_POST['hora_entrega'] ?? '', 20) ?: null,
                 $tipo,
@@ -593,6 +597,7 @@ if (puede('pedidos', 'editar')) {
         $datosEditar[$p['id']] = [
             'id' => (int) $p['id'], 'manual' => $p['origen'] === 'manual',
             'cliente' => (string) $p['cliente_nombre'], 'telefono' => (string) $p['telefono'],
+            'receptor' => (string) $p['receptor_nombre'], 'receptorTelefono' => (string) $p['receptor_telefono'],
             'fecha' => (string) $p['fecha_entrega'], 'hora' => (string) $p['hora_entrega'],
             'tipo' => (string) $p['tipo_entrega'], 'direccion' => (string) $p['direccion'],
             'dedicatoria' => (string) $p['dedicatoria'], 'nota' => (string) $p['nota'],
@@ -632,12 +637,20 @@ function campos_pedido(string $pre, bool $edicion, string $fechaInicial = ''): v
         <input type="text" id="<?= e($pre) ?>-hora" name="hora_entrega" maxlength="20" placeholder="Ej. 2:30 p.m.">
       </div>
       <div>
-        <label for="<?= e($pre) ?>-cliente">Cliente</label>
+        <label for="<?= e($pre) ?>-cliente">Cliente (quien paga)</label>
         <input type="text" id="<?= e($pre) ?>-cliente" name="cliente_nombre" maxlength="150">
       </div>
       <div>
-        <label for="<?= e($pre) ?>-tel">Teléfono</label>
+        <label for="<?= e($pre) ?>-tel">Teléfono del cliente</label>
         <input type="text" id="<?= e($pre) ?>-tel" name="telefono" maxlength="30" inputmode="tel">
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-recibe">Recibe (quien recibe el arreglo)</label>
+        <input type="text" id="<?= e($pre) ?>-recibe" name="receptor_nombre" maxlength="150">
+      </div>
+      <div>
+        <label for="<?= e($pre) ?>-recibe-tel">Teléfono de quien recibe</label>
+        <input type="text" id="<?= e($pre) ?>-recibe-tel" name="receptor_telefono" maxlength="30" inputmode="tel">
       </div>
       <div>
         <label for="<?= e($pre) ?>-tipo">Recoge o envío</label>
@@ -725,6 +738,23 @@ function numero_wa(?string $tel): string
         $d = '504' . $d;
     }
     return strlen($d) >= 10 ? $d : '';
+}
+
+/**
+ * Enlace de WhatsApp al CLIENTE (quien paga) con un saludo ya escrito, para que la
+ * floristería le confirme el pedido aunque no haya llegado el mensaje por chat.
+ * Devuelve '' si el teléfono del cliente no sirve para WhatsApp.
+ */
+function wa_cliente_url(array $p): string
+{
+    $num = numero_wa($p['telefono'] ?? '');
+    if ($num === '') {
+        return '';
+    }
+    $nombre = trim((string) ($p['cliente_nombre'] ?? ''));
+    $texto = 'Hola' . ($nombre !== '' ? ' ' . $nombre : '') . ', te escribimos de LIRIOS Floristería. '
+        . 'Recibimos tu pedido #' . (int) $p['id'] . ' por la web, ¿lo confirmamos?';
+    return 'https://wa.me/' . $num . '?text=' . rawurlencode($texto);
 }
 
 function fecha_corta(string $ymd): string
@@ -1040,7 +1070,9 @@ admin_header('Pedidos', 'pedidos.php');
             'id' => (int) $p['id'],
             'cliente' => $p['cliente_nombre'] ?: 'Sin nombre',
             'telefono' => (string) $p['telefono'],
-            'wa' => numero_wa($p['telefono']),
+            'wa' => wa_cliente_url($p),
+            'receptor' => (string) $p['receptor_nombre'],
+            'receptorTelefono' => (string) $p['receptor_telefono'],
             'fecha' => DIAS_LARGOS[(int) date('N', strtotime($p['fecha_entrega'])) - 1] . ' ' . fecha_corta($p['fecha_entrega']),
             'hora' => (string) $p['hora_entrega'],
             'tipo' => (string) $p['tipo_entrega'],
@@ -1074,7 +1106,7 @@ admin_header('Pedidos', 'pedidos.php');
   <div class="det-total"><span>Total</span><strong id="det-total"></strong></div>
   <p class="det-desglose" id="det-desglose"></p>
   <div class="det-acciones">
-    <a class="btn mini secundario" id="det-wa" target="_blank" rel="noopener"><?= ico('wa') ?> WhatsApp</a>
+    <a class="btn mini secundario" id="det-wa" target="_blank" rel="noopener"><?= ico('wa') ?> Escribir al cliente</a>
     <?php if (puede('pedidos', 'editar')): ?><button type="button" class="btn mini" id="det-editar">Editar pedido</button><?php endif; ?>
     <a class="btn mini secundario" id="det-lista">Ver en la Lista</a>
   </div>
@@ -1105,7 +1137,9 @@ admin_header('Pedidos', 'pedidos.php');
       chips.appendChild(el('span', 'pill', d.pago));
       if (d.manual) chips.appendChild(el('span', 'pill neutro', 'Pedido manual'));
       var dl = document.getElementById('det-datos'); dl.textContent = '';
-      fila(dl, 'Teléfono', d.telefono); fila(dl, 'Dirección', d.direccion);
+      fila(dl, 'Teléfono del cliente', d.telefono);
+      fila(dl, 'Recibe', d.receptor); fila(dl, 'Teléfono de quien recibe', d.receptorTelefono);
+      fila(dl, 'Dirección', d.direccion);
       fila(dl, 'Dedicatoria', d.dedicatoria); fila(dl, 'Nota', d.nota);
       var it = document.getElementById('det-items'); it.textContent = '';
       if (d.manual && d.descripcion && !d.items.length) { it.appendChild(el('p', 'det-item', d.descripcion)); }
@@ -1117,7 +1151,7 @@ admin_header('Pedidos', 'pedidos.php');
       document.getElementById('det-total').textContent = d.total;
       document.getElementById('det-desglose').textContent = d.desglose;
       var wa = document.getElementById('det-wa');
-      if (d.wa) { wa.href = 'https://wa.me/' + d.wa; wa.hidden = false; } else { wa.hidden = true; }
+      if (d.wa) { wa.href = d.wa; wa.hidden = false; } else { wa.hidden = true; }
       document.getElementById('det-lista').href = d.lista;
       dlg.showModal();
     });
@@ -1167,7 +1201,9 @@ admin_header('Pedidos', 'pedidos.php');
             <?php elseif (es_envio($p['tipo_entrega'])): ?><span class="pill neutro">Envío</span><?php endif; ?>
           </h3>
           <p class="ped-linea">
-            <?php if ($p['telefono']): ?><span><?= ico('tel') ?><?= e($p['telefono']) ?></span><?php endif; ?>
+            <?php if ($p['telefono']): ?><span><?= ico('tel') ?><?= e($p['telefono']) ?></span><?php else: ?><span class="muted"><?= ico('tel') ?>Sin teléfono del cliente</span><?php endif; ?>
+            <?php if ($p['receptor_nombre']): ?><span><?= ico('regalo') ?>Recibe: <?= e($p['receptor_nombre']) ?><?= $p['receptor_telefono'] ? ' · ' . e($p['receptor_telefono']) : '' ?></span><?php endif; ?>
+            <?php if ($waCliente = wa_cliente_url($p)): ?><a class="btn mini secundario" href="<?= e($waCliente) ?>" target="_blank" rel="noopener"><?= ico('wa') ?> Escribir al cliente</a><?php endif; ?>
             <span><?= ico('regalo') ?><?= e(resumen_productos($p, $itemsPorPedido)) ?></span>
           </p>
           <details class="ped-mas">
@@ -1372,6 +1408,8 @@ admin_header('Pedidos', 'pedidos.php');
     form.elements['id'].value = d.id;
     form.elements['cliente_nombre'].value = d.cliente;
     form.elements['telefono'].value = d.telefono;
+    form.elements['receptor_nombre'].value = d.receptor;
+    form.elements['receptor_telefono'].value = d.receptorTelefono;
     form.elements['fecha_entrega'].value = d.fecha;
     form.elements['hora_entrega'].value = d.hora;
     var tipo = form.elements['tipo_entrega'];

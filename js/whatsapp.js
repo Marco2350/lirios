@@ -39,6 +39,9 @@ export function buildOrderMessage(cart, total, datosCliente = {}) {
   const {
     nombre = '',
     telefono = '',
+    receptorNombre = '',
+    receptorTelefono = '',
+    yoRecibo = false,
     fechaEntrega = '',
     horaEntrega = '',
     tipoEntrega = '',
@@ -67,8 +70,14 @@ export function buildOrderMessage(cart, total, datosCliente = {}) {
     ...lineas,
     `*Total:* ${formatPrice(total)}`,
     '',
-    `*Nombre:* ${nombre || '__'}`,
-    `*Teléfono:* ${telefono || '__'}`,
+    `*Cliente (quien paga):* ${nombre || '__'}`,
+    `*Teléfono del cliente:* ${telefono || '__'}`,
+    ...(yoRecibo
+      ? ['*Recibe:* El mismo cliente']
+      : [
+          `*Recibe:* ${receptorNombre || '__'}`,
+          `*Teléfono de quien recibe:* ${receptorTelefono || '__'}`,
+        ]),
     `*Entrega:* ${fechaEntrega ? formatFecha(fechaEntrega) : '__'} / *Hora:* ${horaEntrega || '__'}`,
     `*Delivery o retiro:* ${tipoEntrega || '__'}`,
     ...lineaDelivery,

@@ -11,7 +11,9 @@
  * Body esperado (JSON):
  * {
  *   "cliente": "María López",           // opcional
- *   "telefono": "9988-7766",             // opcional
+ *   "telefono": "9988-7766",             // obligatorio: teléfono de quien PAGA (8 dígitos)
+ *   "receptorNombre": "Ana Pérez",        // quien recibe; obligatorio si es delivery
+ *   "receptorTelefono": "9911-2233",       // quien recibe; opcional
  *   "fechaEntrega": "2026-08-25",         // opcional, YYYY-MM-DD (input type=date)
  *   "horaEntrega": "14:30",                // opcional, HH:MM (input type=time)
  *   "tipoEntrega": "Delivery a domicilio",  // opcional, texto libre
@@ -75,11 +77,32 @@ if (!is_array($datos) || empty($datos['items']) || !is_array($datos['items'])) {
 $items = array_slice($datos['items'], 0, 40); // límite razonable por pedido
 $cliente = limpiar((string) ($datos['cliente'] ?? ''), 150);
 $telefono = limpiar((string) ($datos['telefono'] ?? ''), 30);
+$receptorNombre = limpiar((string) ($datos['receptorNombre'] ?? ''), 150);
+$receptorTelefono = limpiar((string) ($datos['receptorTelefono'] ?? ''), 30);
 $tipoEntrega = limpiar((string) ($datos['tipoEntrega'] ?? ''), 40);
 $direccion = limpiar((string) ($datos['direccion'] ?? ''), 300);
 $dedicatoria = limpiar((string) ($datos['dedicatoria'] ?? ''), 300);
 $pago = limpiar((string) ($datos['pago'] ?? ''), 100);
 $nota = limpiar((string) ($datos['nota'] ?? ''), 500);
+
+/* Quien paga debe poder ser contactado: nombre y un teléfono hondureño válido
+   (8 dígitos, con o sin 504). El navegador ya lo valida, pero aquí se vuelve
+   a exigir para que nadie pueda saltarse el formulario. */
+function telefono_valido(?string $tel): bool
+{
+    $d = preg_replace('/\D+/', '', (string) $tel);
+    if (strlen($d) === 11 && str_starts_with($d, '504')) $d = substr($d, 3);
+    return strlen($d) === 8;
+}
+
+if ($cliente === null || !telefono_valido($telefono)) {
+    http_response_code(422);
+    echo json_encode(['error' => 'Indica tu nombre y un teléfono válido de 8 dígitos para poder contactarte.']);
+    exit;
+}
+if ($receptorTelefono !== null && !telefono_valido($receptorTelefono)) {
+    $receptorTelefono = null; // opcional: si viene mal escrito, no se guarda
+}
 
 $fechaEntregaCruda = (string) ($datos['fechaEntrega'] ?? '');
 $fechaEntrega = (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaEntregaCruda) ? $fechaEntregaCruda : null;
@@ -171,12 +194,14 @@ try {
     db()->beginTransaction();
 
     $stmt = db()->prepare(
-        'INSERT INTO pedidos (cliente_nombre, telefono, fecha_entrega, hora_entrega, tipo_entrega, direccion, zona_delivery_id, zona_delivery_nombre, costo_delivery, dedicatoria, forma_pago, nota, ip, total)
-         VALUES (:cliente, :telefono, :fecha_entrega, :hora_entrega, :tipo_entrega, :direccion, :zona_id, :zona_nombre, :costo_delivery, :dedicatoria, :forma_pago, :nota, :ip, :total)'
+        'INSERT INTO pedidos (cliente_nombre, telefono, receptor_nombre, receptor_telefono, fecha_entrega, hora_entrega, tipo_entrega, direccion, zona_delivery_id, zona_delivery_nombre, costo_delivery, dedicatoria, forma_pago, nota, ip, total)
+         VALUES (:cliente, :telefono, :receptor_nombre, :receptor_telefono, :fecha_entrega, :hora_entrega, :tipo_entrega, :direccion, :zona_id, :zona_nombre, :costo_delivery, :dedicatoria, :forma_pago, :nota, :ip, :total)'
     );
     $stmt->execute([
         'cliente' => $cliente,
         'telefono' => $telefono,
+        'receptor_nombre' => $receptorNombre,
+        'receptor_telefono' => $receptorTelefono,
         'fecha_entrega' => $fechaEntrega,
         'hora_entrega' => $horaEntrega,
         'tipo_entrega' => $tipoEntrega,
@@ -224,6 +249,8 @@ try {
     notificar_pedido_por_correo($pedidoId, [
         'cliente' => $cliente,
         'telefono' => $telefono,
+        'receptorNombre' => $receptorNombre,
+        'receptorTelefono' => $receptorTelefono,
         'fechaEntrega' => $fechaEntrega,
         'horaEntrega' => $horaEntrega,
         'tipoEntrega' => $tipoEntrega,

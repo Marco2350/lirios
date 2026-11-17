@@ -105,6 +105,8 @@ function registrarPedido(cart, datosCliente) {
       cliente: datosCliente.nombre,
       nota: datosCliente.nota,
       telefono: datosCliente.telefono,
+      receptorNombre: datosCliente.receptorNombre,
+      receptorTelefono: datosCliente.receptorTelefono,
       fechaEntrega: datosCliente.fechaEntrega,
       horaEntrega: datosCliente.horaEntrega,
       tipoEntrega: datosCliente.tipoEntrega,
@@ -308,6 +310,41 @@ function initCartPage() {
     }
   });
 
+  /* Quien recibe: si marca "yo recibo" se ocultan y vacían los campos del
+     receptor; el nombre de quien recibe es obligatorio solo en delivery. */
+  const checkYoRecibo = document.getElementById('recipient-is-me');
+  const camposReceptor = document.getElementById('recipient-fields');
+  const marcaReceptor = document.getElementById('recipient-name-mark');
+
+  function esDelivery() {
+    return document.getElementById('customer-delivery-type')?.value === 'Delivery a domicilio';
+  }
+  function receptorNombreObligatorio() {
+    return esDelivery() && !checkYoRecibo?.checked;
+  }
+  function actualizarReceptor() {
+    const yoRecibo = !!checkYoRecibo?.checked;
+    if (camposReceptor) camposReceptor.hidden = yoRecibo;
+    if (yoRecibo) {
+      for (const id of ['recipient-name', 'recipient-phone']) {
+        const campo = document.getElementById(id);
+        if (campo) campo.value = '';
+        campo?.closest('.form-field')?.classList.remove('invalid');
+      }
+    }
+    if (marcaReceptor) marcaReceptor.hidden = !receptorNombreObligatorio();
+  }
+  checkYoRecibo?.addEventListener('change', actualizarReceptor);
+  deliveryTypeSelect?.addEventListener('change', actualizarReceptor);
+  actualizarReceptor();
+
+  /** Teléfono hondureño: 8 dígitos, con o sin el prefijo 504, con guiones/espacios permitidos. */
+  function telefonoValido(texto) {
+    let digitos = texto.replace(/\D+/g, '');
+    if (digitos.length === 11 && digitos.startsWith('504')) digitos = digitos.slice(3);
+    return digitos.length === 8;
+  }
+
   const CAMPOS_OBLIGATORIOS = [
     'customer-name',
     'customer-phone',
@@ -322,19 +359,50 @@ function initCartPage() {
     });
   }
 
+  document.getElementById('recipient-name')?.addEventListener('input', (e) => {
+    if (e.target.value.trim()) e.target.closest('.form-field')?.classList.remove('invalid');
+  });
+  for (const id of ['customer-phone', 'recipient-phone']) {
+    document.getElementById(id)?.addEventListener('input', (e) => {
+      if (!e.target.value.trim() || telefonoValido(e.target.value)) {
+        e.target.closest('.form-field')?.classList.remove('invalid');
+        if (id === 'customer-phone') document.getElementById('customer-phone-error').hidden = true;
+      }
+    });
+  }
+
   /** Marca en rojo los campos obligatorios vacíos y enfoca el primero. Devuelve true si todo está completo. */
   function validarCamposObligatorios() {
     let primerCampoInvalido = null;
+    const marcar = (campo, invalido) => {
+      campo?.closest('.form-field')?.classList.toggle('invalid', invalido);
+      if (invalido && !primerCampoInvalido) primerCampoInvalido = campo;
+    };
+
     for (const id of CAMPOS_OBLIGATORIOS) {
       const campo = document.getElementById(id);
-      const wrapper = campo?.closest('.form-field');
-      const vacio = !campo?.value.trim();
-      wrapper?.classList.toggle('invalid', vacio);
-      if (vacio && !primerCampoInvalido) primerCampoInvalido = campo;
+      marcar(campo, !campo?.value.trim());
     }
+
+    // Teléfono de quien paga: obligatorio y de 8 dígitos (si no, no hay forma de contactarlo).
+    const tel = document.getElementById('customer-phone');
+    const telMalo = !!tel?.value.trim() && !telefonoValido(tel.value);
+    document.getElementById('customer-phone-error').hidden = !telMalo;
+    marcar(tel, !tel?.value.trim() || telMalo);
+
+    // Quien recibe: nombre obligatorio en delivery; teléfono opcional pero, si se escribe, válido.
+    const recNombre = document.getElementById('recipient-name');
+    marcar(recNombre, receptorNombreObligatorio() && !recNombre?.value.trim());
+    const recTel = document.getElementById('recipient-phone');
+    marcar(recTel, !!recTel?.value.trim() && !telefonoValido(recTel.value));
+
     if (primerCampoInvalido) {
       primerCampoInvalido.focus();
-      showToast('Completa los campos obligatorios para enviar tu pedido');
+      let msg = 'Completa los campos obligatorios para enviar tu pedido';
+      if (primerCampoInvalido === tel && telMalo) msg = 'Revisa tu teléfono: deben ser 8 dígitos';
+      else if (primerCampoInvalido === recNombre) msg = 'Indica el nombre de quien recibe el arreglo';
+      else if (primerCampoInvalido === recTel) msg = 'Revisa el teléfono de quien recibe: deben ser 8 dígitos';
+      showToast(msg);
       return false;
     }
 
@@ -343,15 +411,42 @@ function initCartPage() {
 
   const enviarBtn = document.getElementById('send-whatsapp');
 
-  enviarBtn?.addEventListener('click', () => {
+  enviarBtn?.addEventListener('click', async () => {
     const cart = getCart();
     if (cart.length === 0) return;
     if (!validarCamposObligatorios()) return;
 
     const valor = (id) => document.getElementById(id)?.value.trim() ?? '';
+
+    // Confirmación explícita: el error que se quiere evitar es poner los datos
+    // de quien recibe en lugar de los de quien paga.
+    if (window.Swal) {
+      const { isConfirmed } = await Swal.fire({
+        icon: 'question',
+        title: 'Confirma tus datos',
+        html:
+          '<p>Te escribiremos para confirmar y coordinar el pago a:</p>' +
+          `<p><strong>${escapeHtml(valor('customer-name'))}</strong><br>${escapeHtml(valor('customer-phone'))}</p>` +
+          '<p style="font-size:.9em;opacity:.8">¿Son los datos de <strong>quien paga</strong> el pedido (no de quien recibe el arreglo)?</p>',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, son los míos',
+        cancelButtonText: 'Corregir',
+        confirmButtonColor: '#B8933E',
+        focusCancel: true,
+      });
+      if (!isConfirmed) {
+        document.getElementById('customer-name')?.focus();
+        return;
+      }
+    }
+
+    const yoRecibo = !!checkYoRecibo?.checked;
     const datosCliente = {
       nombre: valor('customer-name'),
       telefono: valor('customer-phone'),
+      receptorNombre: yoRecibo ? '' : valor('recipient-name'),
+      receptorTelefono: yoRecibo ? '' : valor('recipient-phone'),
+      yoRecibo,
       fechaEntrega: valor('customer-delivery-date'),
       horaEntrega: valor('customer-delivery-time'),
       tipoEntrega: valor('customer-delivery-type'),
@@ -366,6 +461,25 @@ function initCartPage() {
 
     registrarPedido(cart, datosCliente);
     window.open(buildWaLink(mensaje), '_blank', 'noopener');
+
+    // El pedido solo queda confirmado cuando el cliente pulsa "Enviar" dentro de
+    // WhatsApp; varios clientes cerraban la ventana sin enviarlo.
+    if (window.Swal) {
+      const { isConfirmed } = await Swal.fire({
+        icon: 'info',
+        title: 'Un último paso',
+        html:
+          '<p>Se abrió WhatsApp con tu pedido ya escrito.</p>' +
+          '<p><strong>Presiona «Enviar» dentro de WhatsApp</strong> para que tu pedido quede confirmado.</p>' +
+          '<p style="font-size:.9em;opacity:.8">¿No se abrió? Toca «Abrir WhatsApp de nuevo».</p>',
+        showCancelButton: true,
+        confirmButtonText: 'Ya lo envié',
+        cancelButtonText: 'Abrir WhatsApp de nuevo',
+        confirmButtonColor: '#B8933E',
+        allowOutsideClick: false,
+      });
+      if (!isConfirmed) window.open(buildWaLink(mensaje), '_blank', 'noopener');
+    }
   });
 }
 
